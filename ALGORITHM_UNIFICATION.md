@@ -1,6 +1,6 @@
 # CCGraph-first implementation and analysis unification plan
 
-## Recommendation
+## Recommendations
 
 **Implement a CCGraph-compatible clone-detection base in both `gstyle` and `rstyle`, backed by a shared, versioned PDG contract. Then build additional analyses around that foundation.** CCGraph is the first implementation milestone, not a side track in a general miner-unification project.
 
