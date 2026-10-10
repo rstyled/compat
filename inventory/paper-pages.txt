@@ -1,0 +1,858 @@
+=== PDF PAGE 1 (1-based) ===
+   CCGraph: a PDG-based code clone detector with approximate
+                       graph matching
+                                        Yue Zou∗                                                                       Bihuan Ban∗
+    School of Computer Science and Technology, University of                                       School of Data Science, University of Science and
+                Science and Technology of China                                                                  Technology of China
+                          Hefei, China                                                                               Hefei, China
+                    zy1996@mail.ustc.edu.cn                                                                   banbihua@mail.ustc.edu.cn
+
+                                    Yinxing Xue†                                                                         Yun Xu†‡
+    School of Computer Science and Technology, University of                                  School of Computer Science and Technology, University of
+                Science and Technology of China                                                           Science and Technology of China
+                          Hefei, China                                                                              Hefei, China
+                       yxxue@ustc.edu.cn                                                                        xuyun@ustc.edu.cn
+
+ABSTRACT                                                                                       ACM Reference Format:
+The software clone detection is an active research area, which is                              Yue Zou, Bihuan Ban, Yinxing Xue, and Yun Xu. 2020. CCGraph: a PDG-
+                                                                                               based code clone detector with approximate graph matching. In 35th IEEE/ACM
+very important for software maintenance, bug detection etc. The
+                                                                                               International Conference on Automated Software Engineering (ASE ’20), Sep-
+two pieces of cloned code reflect some similarities or equivalents                             tember 21–25, 2020, Virtual Event, Australia. ACM, New York, NY, USA,
+in the syntax or structure of the code representations. There are                              12 pages. https://doi.org/10.1145/3324884.3416541
+many representations of code like AST, token, PDG etc. The PDG
+(Program Dependency Graph) of source code can contain both                                     1    INTRODUCTION
+syntactic and structural information. However, most existing PDG-
+                                                                                               Software development often has the phenomenon of copying sim-
+based tools are quite time-consuming and miss many clones because
+                                                                                               ilar or identical code fragments from the existing source codes,
+they detect code clones with exact graph matching by using sub-
+                                                                                               called 𝑐𝑜𝑑𝑒 𝑐𝑙𝑜𝑛𝑒𝑠. Existing research shows that code cloning is
+graph isomorphism. In this paper, we propose a novel PDG-based
+                                                                                               very important in the software development and maintenance [1,
+code clone detector, CCGraph, that uses graph kernels. Firstly, we
+                                                                                               2], like software refactoring [3], bug detection [4], copyright pla-
+normalize the structure of PDGs and design a two-stage filtering
+                                                                                               giarism detection [5], code evolution analysis. In the various kinds
+strategy by measuring the characteristic vectors of codes. Then
+                                                                                               of code clone detection approaches, PDG (Program Dependency
+we detect the code clones by using approximate graph matching
+                                                                                               Graph)-based approaches can find the code clones both in syntac-
+algorithm based on the reforming WL (Weisfeiler-Lehman) graph
+                                                                                               tic similarity and semantic similarity. As Bellon et al. [6] noted,
+kernel. Experiment results show that CCGraph retains a high accu-
+                                                                                               PDG-based approaches can also report non-contiguous clones that
+racy, has both better recall and F1-score values, and detects more
+                                                                                               cannot be perceived by other techniques. However, most PDG-
+semantic clones than other two related state-of-the-art tools. Be-
+                                                                                               based approaches consume too much time beacuse they match
+sides, CCGraph is much more efficient than the existing PDG-based
+                                                                                               graphs exactly by using subgraph isomorphism, since this is an
+tools.
+                                                                                               NP-hard problem [7]. Besides, in existing PDG-based approaches,
+                                                                                               many of the code clones are missed due to using exact or very close
+CCS CONCEPTS
+                                                                                               subgraph isomorphism. Therefore, not only the PDG-based code
+• Software and its engineering → Software maintenance tools.                                   clone detector with approximate graph matching can find more
+                                                                                               code clones, but also make the processing time faster. In addition,
+KEYWORDS                                                                                       there are some deep learning method, such as Oreo [15], which
+Clone detection, Program dependence graph, WL graph kernel                                     encode software metrics including PDG metrics into vectors and
+∗ Also with Key Laboratory on High Performance Computing, Anhui Province.                      achieve good results. However, these methods are dependent on
+† Yinxing Xue and Yun Xu are the corresponding authors.                                        the initial training data and lack interpretability of output results.
+‡ Also with Key Laboratory on High Performance Computing, Anhui Province.                         Among these PDG-based approaches, Liu et al. [5] proposed a
+                                                                                               classic PDG-based clone detection by using the VF subgraph isomor-
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed          phism algorithm. And they did not perform any filtering operations
+for profit or commercial advantage and that copies bear this notice and the full citation      on PDG candidate sets. Since VF subgraph isomorphism algorithm
+on the first page. Copyrights for components of this work owned by others than ACM             belongs to the method of exact graphs match, this results in the
+must be honored. Abstracting with credit is permitted. To copy otherwise, or republish,
+to post on servers or to redistribute to lists, requires prior specific permission and/or a    expensive time cost. For the issue of high complexity of subgraph
+fee. Request permissions from permissions@acm.org.                                             isomorphism, Gabel et al. [8] proposed a method of mapping PDG
+ASE ’20, September 21–25, 2020, Virtual Event, Australia                                       to AST and used the similarity of AST to replace the similarity of
+© 2020 Association for Computing Machinery.
+ACM ISBN 978-1-4503-6768-4/20/09. . . $15.00                                                   PDGs. Although this method speeds up the clone detection, it loses
+https://doi.org/10.1145/3324884.3416541                                                        a lot of semantic information and results in many missing clones.
+
+=== PDF PAGE 2 (1-based) ===
+ASE ’20, September 21–25, 2020, Virtual Event, Australia                                                                   Yue Zou, Bihuan Ban, Yinxing Xue, and Yun Xu
+
+
+
+                            1: public static void loop1(int maxsize){                     1: public static void loop2(int count){
+                            2: int index=0;                                               2: int loopsize=count;
+                            3: while(index<maxsize){                                      3: for(int i=0;i<loopsize;++i){
+                            4:      System.out.println(index);                            4:      count=i;
+                            5:      index++;                                              5:      System.out.println(i);
+                            6: }                                                          6: }
+                            7: }                                                          7: }
+
+                                     (a) The Source Code of loop1                                  (b) The Source Code of loop2
+
+
+                                                  Figure 1: The PDG-based Clone Pair for Loop Printing.
+
+
+
+                                                      int index=0; <2>                            int count; <1>
+                                                                                                                            int loopsize=count; <3>
+
+                                       int maxsize; <1>
+                                                                                                            int i=0; <4>
+                             index++; <5>
+                                                                                           System.out.println(i); <6>              ++i; <4>
+                                                    index < maxsize <3>
+
+
+                                                                                          count = i; <5>
+                                      System.out.println(index); <4>                                                       i < loopsize <4>
+
+
+
+                                            (a) PDG for loop1                                              (b) PDG for loop2
+
+
+                                                            Figure 2: Two PDGs for Loops in Figure 1.
+
+
+Futhermore, for the issue of large PDG candidate sets, both Li et al.              of graph structural information and severely affects the accuracy
+[4] and Wang et al. [9] adopted some strategies to modify the PDG                  of the graph matching. The graph kernel methods [11] divide a
+and reduce the size of PDG candidate sets, like removing irrelevant                graph into several sub-structures as kernels, and then calculate the
+nodes and edges. However, they still do not avoid solving the issue                similarity of the two graphs through their sub-structures. Different
+of subgraph isomorphism directly.                                                  decomposition methods and substructures correspond to different
+   Besides the processing time, there are many clones missed for                   types of graph kernel methods. For example, the WL (Weisfeiler-
+existing PDG-based approaches. For example, the PDGs of the origi-                 Lehman) [11] graph kernel collects the labels of the adjacent nodes
+nal and the clone code are given in Figure 1. Both of the code pieces              of each node in two graphs, and measures the similarity of two
+implement the same function of loop printing. However, one uses                    nodes according to the similarity of the labels. The more similar
+a 𝑤ℎ𝑖𝑙𝑒 loop and the other one uses a 𝑓 𝑜𝑟 loop, and there are some                nodes in two graphs, the closer the two graphs are. This kind of
+other different statements. From the PDGs shown in Figure 2, there                 methods not only retain the advantages of low computational cost
+is no exact subgraph isomorphism between the two PDGs, but there                   of the kernel function, but also contain various types of graph infor-
+are some local similarities. As we can see, the diamond nodes in                   mation such as directed edges and labels. Therfore, the WL graph
+two graphs have similar outgoing and inbound edges. Moreover,                      kernel is very suitable for calculating the similarity between PDG
+they have similar neighbor nodes which are assignment or declara-                  pairs. Besides, the approximate graph matching based on graph
+tion statements, and they have similar control dependencies with                   kernels has been successfully applied in the fields of human face
+with their neighbors. Also, there are some other local similarities                recognition [12], network analysis [13], and compound classifica-
+in the two PDGs, which are not described in details here. How-                     tion [14].
+ever, the existing PDG-based methods cannot detect these local                        In this paper, we propose a novel PDG-based code clone detector,
+similarities. Therefore, we adopt the approximate graph matching                   called CCGraph, which can find more PDG-based clones than other
+algorithm to detect these local similarities which is actually a kind              tools and is much faster than those PDG-based tools. This approach
+of approximated PDG-based code clones.                                             reduces the size of original PDGs at first, and then filters PDG pairs
+   The approximate graph matching algorithms are mainly divided                    by a two-stage strategy with characteristic similarities. Finally,
+into two classes, graph embedding and graph kernel methods [10].                   CCGraph identifies clone pairs by an approximate graph matching
+Graph embedding methods embed a graph into a low-dimensional                       algorithm based on WL (Weisfeiler-Lehman) [11] graph kernel
+vector based on the characteristics of the graph, which can quantita-              algorithm. To sum up, our study makes the following contributions:
+tively measure the similarity between nodes and is more convenient                    1) We adopt approximate graph matching algorithm based on WL
+to apply. However, this dimensionality reduction process loses a lot               graph kernel. WL graph kernel sorts and compresses the labels of
+
+=== PDF PAGE 3 (1-based) ===
+CCGraph: a PDG-based code clone detector with approximate graph matching                                 ASE ’20, September 21–25, 2020, Virtual Event, Australia
+
+
+all adjacent vertices of each node in each iteration [11], and we can         Definition 2.1. Program Dependency Graph: The PDG for a code
+calculate the similarity of two graphs by comparing the number of          program is represented as 𝐺 = (𝑉 , 𝐸, 𝜇, 𝛿), where V is the set of
+similar nodes in graphs. We design the iteration times according to        nodes in graph, E is the set of edges in graph, 𝜇 : 𝑉 → 𝑆 is a
+the graph diameter, and add the weight of each iteration considering       function assigning types to nodes in graph, 𝛿 : 𝐸 → 𝑆 is a function
+the distance of the nodes. Our tool can accelerate the comparison          assigning dependency types to edges.
+of graph similarity and detect more clones than the state-of-the-art
+tools.                                                                     2.2      Subgraph Isomorphism
+    2) In the preprocessing stage, we design a two-stage filtering
+                                                                           Recently, many PDG-based clone detections define the clone pair
+algorithm. First, we count some numerical characteristics of PDG
+                                                                           of program 𝑝 and 𝑝 ′ if and only if there is subgraph isomorphism
+for rough filtering, such as the size of PDG, and classify the similar
+                                                                           relationship among their PDGs. The mathematic definition of sub-
+PDGs into the same category. Then, for each category, we calculate
+                                                                           graph isomorphism is defined as below.
+the similarity of string characteristics like function names based on
+𝐽𝑎𝑟𝑜𝑊 𝑖𝑛𝑘𝑙𝑒𝑟 distance [20]. In addition, we optimize the structure
+                                                                              Definition 2.2. Graph Isomorphism: 𝐺 1 (𝑉1, 𝐸 1, 𝜇1, 𝛿 1 ) is a graph
+of PDGs by eliminating and merging some irrelative nodes. These
+                                                                           isomorphism to 𝐺 2 (𝑉2, 𝐸 2, 𝜇2, 𝛿 2 ) if and only if there is a bijective
+strategies can reduce the size of candidate clone pairs greatly.
+                                                                           function 𝑓 : 𝑉1 → 𝑉2 and 𝑓 −1 : 𝑉2 → 𝑉1 satisfying:
+    3) We present the whole PDG-based clone detector called CC-
+Graph, reduce the candidate clone pairs scale in the preprocessing               • 𝜇 1 (𝑣) = 𝜇 2 (𝑓 (𝑣)) for any 𝑣 ∈ 𝑉1 .
+stage and adopt the approximate graph matching algorithm. It can                 • ∀𝑒 = (𝑣 1, 𝑣 2 ) ∈ 𝐸 1, ∃𝑒 ′ = (𝑓 (𝑣 1 ), 𝑓 (𝑣 2 )) ∈ 𝐸 2 such that
+detect more PDG-based clones than the latest clone detector Oreo                   𝛿 (𝑒) = 𝛿 (𝑒 ′ ).
+[15] based on deep learning for Java and be much faster than the                 • ∀𝑒 = (𝑣 1, 𝑣 2 ) ∈ 𝐸 2, ∃𝑒 ′ = (𝑓 −1 (𝑣 1 ), 𝑓 −1 (𝑣 2 )) ∈ 𝐸 1 such that
+latest PDG-based clone detector CCsharp [9] for C code.                            𝛿 (𝑒 ′ ) = 𝛿 (𝑒).
+    The rest of this paper is structured as follows. Section 2 intro-
+duces some concepts and definitions used in our research. Section             Definition 2.3. Subgraph Isomorphism: 𝐺 1 (𝑉1, 𝐸 1, 𝜇1, 𝛿 1 ) is a sub-
+3 describes the details of methods proposed in our clone detection         graph isomorphism to 𝐺 2 (𝑉2, 𝐸 2, 𝜇2, 𝛿 2 ) if and only if there is an
+process. Section 4 shows the implementation and experiment of our          injective function 𝑓 : 𝑉1 → 𝑉2 that there is a subgraph 𝑆 ⊆ 𝐺 2 such
+tool against some other state-of-the-art tools on some codebases.          that f is a graph isomorphism from 𝐺 1 to 𝑆.
+Section 5 and 6 summarize the related work and discuss the lim-
+itations of our approach. Finally, Section 7 concludes the present
+                                                                           2.3      Weisfeiler-Lehman Graph Kernel
+work with a discussion of future work of CCGraph.
+                                                                           Mathematically, the method of graph kernels maps graphs to a
+                                                                           vector feature space, and calculates the graph similarity by their
+2     PRELIMINARIES AND DEFINITIONS                                        inner product in the vector feature space. In the process of calculat-
+In this section, we give the definitions of some important concepts        ing, it divides a graph into substructures, and any combination of
+and notations used in the detection work, like PDG, subgraph iso-          graph decomposition and substructure isomorphism judgment can
+morphism, and the WL graph kernel which is used in our proposed            be defined as a new graph kernel.
+method. We also give the definitions of PDG-based clones we need
+to detect.                                                                    Definition 2.4. Graph Kernel: G is a finite set of graphs, 𝑅 is a
+                                                                           point product space and the function 𝑘 : (G × G) → 𝑅 is a graph
+                                                                           kernel, then there is a Hilbert space F and a mapping function
+2.1    Program Dependency Graph                                            𝛾 : G → 𝐹 , for all 𝐺 1, 𝐺 2 ∈ G, 𝑘 ( 𝐺 1, 𝐺 2 ) =< 𝛾 (𝐺 1 ), 𝛾 (𝐺 2 ) >,
+A program dependency graph (PDG) is a labeled and directed garph           where < · , · > means the inner product in Hilbert space.
+of the source code to show some dependencies like Figure 2. The               Generally, given two graphs 𝐺 1, 𝐺 2 , and the substructures se-
+nodes in PDG can be classified into the system and statement nodes.        quences {𝑆 1,1, 𝑆 1,2, . . . , 𝑆 1,𝑛1 } of 𝐺 1 and {𝑆 2,1, 𝑆 2,2, . . . , 𝑆 2,𝑛2 } of 𝐺 2 ,
+The system nodes are generated from PDG generation tools, like             where 𝑆 1,𝑖 is the 𝑖 𝑡ℎ substructure of 𝐺 1 and 𝑆 2,𝑗 is the 𝑗 𝑡ℎ substruc-
+function entrance or exit nodes, which is not the specific code            ture of 𝐺 2 , the graph kernel of 𝐺 1 and 𝐺 2 can be expressed as
+statement. The statement nodes include each statement and its type                                                  𝑛 1 𝑛 2
+                                                                                                                    Õ   Õ
+for them.                                                                                        𝑘𝑟 (𝐺 1, 𝐺 2 ) =             𝜎 (𝑆 1,𝑖 , 𝑆 2,𝑗 )
+   The edges show some dependencies between statement nodes,                                                        𝑖=1 𝑗=1
+such as the data and control dependencies. The control dependency
+edge is from a control node to a next node if the condition controls       where 𝜎 (𝑆 1,𝑖 , 𝑆 2,𝑗 ) = 1 when 𝑆 1,𝑖 and 𝑆 2,𝑗 are isomorphism else
+that the next node will be executed. The data dependency edge is           𝜎 (𝑆 1,𝑖 , 𝑆 2,𝑗 ) = 0.
+between two nodes that they all use the same variable or one of
+them assigns the variable and the another uses it either directly or           Definition 2.5. Weisfeiler-Lehman Graph Kernel: Given two graphs
+indirectly like pointers. There is one more dependency edge called         𝐺 1 (𝑉1, 𝐸 1, 𝜇1, 𝛿 1 ) and 𝐺 2 (𝑉2, 𝐸 2, 𝜇2, 𝛿 2 ) and iteration number h, af-
+execution dependency, which is between two nodes if one of the             ter the ℎ𝑡ℎ times iteration of WL subtree isomorphism algorithm,
+nodes may only be executed after the another one.                          we get the structures of two graphs as 𝐺 1 (ℎ) = (𝐺 1, 𝑙ℎ (𝐺 1 )) and
+                                                                           𝐺 2 (ℎ) = (𝐺 2, 𝑙ℎ (𝐺 2 )). And 𝑙ℎ (𝐺 1 ) is the set of node labels for 𝐺 1 in
+
+=== PDF PAGE 4 (1-based) ===
+ASE ’20, September 21–25, 2020, Virtual Event, Australia                                                                    Yue Zou, Bihuan Ban, Yinxing Xue, and Yun Xu
+
+
+
+
+                             5           2                         2   5                   5,234                2,35                2,45              5,234
+
+
+
+                         4                   3             4                    3       4,1135                  3,245        4,1235                    3,245
+
+                                 1
+                                                                                                          1,4
+                             1                                 1           2                 1,4                                    1,4               2,3
+
+
+                                        (a) Given PDG G and G’                                          (b) Multiple set label sorting
+
+
+
+                         1,4             6           3, 245                    10            13            8                        9            13
+
+                         2,3             7          4, 1135                    11
+                                                                                        11                       10        12                         10
+                        2,35             8          4, 1235                    12                  6
+                        2,45             9           5, 234                    13            6                                  6                7
+
+                                         (c) Lable compression                                         (d) Reassignment of node labels
+
+
+                                          Figure 3: Computation of the WL graph kernel for one iteration
+
+
+the iteration h, the WL graph kernel is expressed as                                similarity based on the WL graph kernel value after normalizing.
+
+         (ℎ)                                                                           Definition 2.6. Similarity of PDG pairs : Given two program depen-
+       𝑘𝑊 𝐿 (𝐺 1, 𝐺 2 ) = 𝑘 (𝐺 1 (0), 𝐺 2 (0)) + ... + 𝑘 (𝐺 1 (ℎ), 𝐺 2 (ℎ))
+                                                                                    dency graphs 𝐺 1 (𝑉1, 𝐸 1, 𝜇1, 𝛿 1 ) and 𝐺 2 (𝑉2, 𝐸 2, 𝜇2, 𝛿 2 ), we measure
+   𝑘 (𝐺 1 (ℎ), 𝐺 2 (ℎ)) is the base kernel function of 𝐺 1 and 𝐺 2 , which          the similarity of PDG pairs by the ℎ times iterations of WL graph
+calculates the number of same label pairs in node label sets 𝑙ℎ (𝐺 1 )              kernel value as
+and 𝑙ℎ (𝐺 2 ).
+                                                                                                                                           (ℎ)
+    Weisfeiler-Lehman (WL) graph kernel [11] is an advanced graph                                                                  𝑘 (𝐺 1, 𝐺 2 )
+kernel in recent years. As shown in Figure 3, the WL graph kernel                                          𝑠𝑖𝑚𝑖𝑙𝑎𝑟𝑖𝑡𝑦 (𝐺 1, 𝐺 2 ) = 𝑊 𝐿
+                                                                                                                                     |𝑉1 ∪ 𝑉2 |
+sorts the labels of all adjacent vertices of each node, compresses
+these labels into new shorter label based on a hash algorithm, and
+                                                                                    , the similarity value is between 0 and 1, and the code fragments
+then counts the same original and compressed labels in two graphs.
+                                                                                    of 𝐺 1 𝑎𝑛𝑑𝐺 2 are 𝑐𝑜𝑑𝑒 𝑐𝑙𝑜𝑛𝑒 when the 𝑠𝑖𝑚𝑖𝑙𝑎𝑟𝑖𝑡𝑦 (𝐺 1, 𝐺 2 ) is bigger
+After one iteration of computation, the compressed labels denote
+                                                                                    than the predefined threshold 𝑇 .
+subtree patterns or sub-structures in graph. For instance, in the
+Figure 3 (a), the node (denoted as 𝑣) with label 5 in G and the same
+label node (denoted as 𝑣 ′ ) in G’ have same neighbor nodes with                    3        PROPOSED METHOD
+label 2, 3 and 4. After collecting the neighbor node labels, both                   In this section, we introduce the overview of the proposed method
+of the label sequences of 𝑣 and 𝑣 ′ are 2,345, which is shown in                    of clone detection firstly, and then describe the design of the simpli-
+Figure 3 (b). Then after the label compression shown in Figure 3                    fication of PDG structures, the characteristic vector extraction, the
+(c), the new label of 𝑣 and 𝑣 ′ is 13. After one iteration of the WL                filtering strategies and the approximate graph matching algorithm
+graph kernel calculating, in the Figure 3 (d), the 𝑣 and 𝑣 ′ have the               based on the WL graph kernel in details.
+same label, which means that the local graph structures around 𝑣
+and 𝑣 ′ are same. When most of the nodes of the two graphs have
+                                                                                    3.1          Overview
+this kind of similarity, we think that the two graphs are very similar.
+                                                                                    The overview of our proposed method is shown in Figure 4. It con-
+                                                                                    sists of two process phases, code preprocessing and clone detection.
+                                                                                    Code preprocessing analyzes the source code files, extracts PDGs
+2.4     Similarity of Graphs Based on WL Graph                                      in function level, simplifies the PDG structures and filters the candi-
+        Kernel                                                                      date PDG pairs by characteristic vectors. Clone detection measures
+After the approximate graph matching, we need to distinguish                        the similarity by calculating the WL graph kernel values of PDG
+whether the original code fragments are clones according to the                     pairs and identifies the code clone if PDG pairs satisfy the threshold
+kernel value we calculated. Hence, we need to define a measure of                   condition.
+
+=== PDF PAGE 5 (1-based) ===
+CCGraph: a PDG-based code clone detector with approximate graph matching                                         ASE ’20, September 21–25, 2020, Virtual Event, Australia
+
+
+
+
+                          PDG                             Simplification and
+                       generation                                                                Approximate
+                                          Program             filtering                                                                 Verifying
+                                                                                                graph matching
+      Source program                     Dependency                            PDG pairs                           Clone candidates
+                                                                                                 based on WL                                          Clone pairs
+           files                           graphs
+                                                                                                 graph kernel
+
+
+                                          Preprocessing                                                                    Clone detection
+
+
+
+
+                                                 Figure 4: The overview of the proposed method.
+
+
+3.2    Simplification of PDG Structures                                               Algorithm 1 Characteristic Vectors Filtering
+In the PDG generation, we observed that there are a large number                      Input: 𝑃 is characteristic vector of code PDG 𝐺. 𝑃 ′ is characteristic
+of system nodes and edges which are not related to code semantic                           vector of code PDG 𝐺 ′ . 𝐿 is threshold of node number in PDG
+information. Also, there are some sub-PDGs which link to other                             characteristic. 𝑇 is threshold of PDG pair’s scale radio. 𝐺𝑆 is
+functions because of function calls in source code. Therefore, we                          threshold of the string similarity and 𝐺 𝑁 is threshold of the
+proposed two strategies to simplify the structure of PDGs, elimi-                          numerical similarity of the characteristic vectors.
+nating meaningless nodes and merging function call sub-PDGs.                          Output: 𝑅 is the candidate PDG pairs for the clone detection
+                                                                                        1: function Filter(𝐺, 𝐺 ′, 𝑃, 𝑃 ′, 𝐿,𝑇 , 𝐺𝑆 , 𝐺 𝑁 )
+3.2.1 Eliminate meaningless nodes. In the process of PDG gener-
+                                                                                        2:     for each code PDG 𝐺 and 𝑃 in clone codes do
+ation, system nodes and some assistant parameter nodes are gen-
+                                                                                        3:         for each code PDG 𝐺 ′ and 𝑃 ′ in clone codes do
+reated automatically by the PDG generation tools. These nodes do
+                                                                                        4:             if 𝑠𝑖𝑧𝑒𝑜 𝑓 (𝐺) < 𝐿 or 𝑠𝑖𝑧𝑒𝑜 𝑓 (𝐺 ′ ) < 𝐿 then
+not affect the original logical structure of the source code. There-
+                                                                                        5:                 PDG pair (𝐺, 𝐺 ′ ) is filtered
+fore, we simply remove these nodes and the edges connected to
+                                                                                        6:             else if 𝑚𝑖𝑛(𝐺, 𝐺 ′ )/𝑚𝑎𝑥 (𝐺, 𝐺 ′ ) < 𝑇 then
+them to reduce the size of PDGs.
+                                                                                        7:                 PDG pair (𝐺, 𝐺 ′ ) is filtered
+3.2.2 Merge function call sub-PDGs. In the PDGs of source code,                         8:             else if number similarity of (𝑃, 𝑃 ′ ) > 𝐺𝑆 then
+the calls to other functions are plotted as a sub-PDGs. Considering                     9:                 𝑅 ← 𝑅 ∪ (𝐺, 𝐺 ′ )
+that the codes corresponding to these sub-PDGs are not in the cur-                     10:                 CONTINUE
+rent file, we simplify to merge the sub-PDG part to one function                       11:             else if string similarity of (𝑃, 𝑃 ′ ) > 𝐺 𝑁 then
+call node. This merging operation does not lose any structure in-                      12:                 𝑅 ← 𝑅 ∪ (𝐺, 𝐺 ′ )
+formation of the original PDG but greatly reduce the size of PDGs.                     13:             end if
+We name the new node type 𝐹𝑢𝑛_𝐶𝑎𝑙𝑙 to represent the function                           14:         end for
+call sub-PDGs in original PDGs.                                                        15:     end for
+                                                                                       16: end function
+
+
+3.3     Filtering of PDG Pairs                                                                   Table 1: The Characteristic Vector of PDG
+Clone detection makes PDG pair-wise comparison, and the scale
+of PDG pairs increases exponentially with the number of PDGs.                              Numerical characteristics       Description
+Therefore, it is necessary to filter PDG pairs for reducing the time                       NumOfCtrlEdges                  The control dependency edges.
+consuming of clone detection.                                                              NumOfExcEdges                   The excute dependency edges.
+   We mainly filter PDG pairs from two aspects. On the one hand,                           NumOfDataEdges                  The data dependency edges.
+we consider the size of PDG directly, such as the number of nodes                          NumOfDeclNodes                  The variable declaration nodes.
+and edges in PDGs. And for the case that the scale ratio of two                            NumOfAssignNodes                The assignment nodes.
+graphs is too big, we filter these PDG pairs as other cloning detec-                       NumOfCtrlNodes                  The control nodes.
+tion methods. On the other hand, we adopt the filtering strategies                         NumOfStateNodes                 The function state nodes.
+according to some important informations in PDGs, such as the                              NumOfOtherNodes                 other types nodes.
+                                                                                           NumOfReference                  The number of reference variables.
+data type of input and output. The overall of PDG’s characteris-
+tics are listed in Table 1 and the filtering process is structured as                      String characteristics          Description
+following subsections, which is also shown in algorithm 1.                                 ReturnPara                      The return parameters.
+                                                                                           IntroPara                       The incoming parameters.
+3.3.1 Numerical similarity filtering. For the numerical part of the                        Name                            The function name.
+characteristic vector, we filter PDG pairs by size of PDG and scale
+ratio firstly, then calculate the cosine similarity between two nu-
+merical vectors. PDG pairs are divided into categories according to
+their numerical similarity.
+
+=== PDF PAGE 6 (1-based) ===
+ASE ’20, September 21–25, 2020, Virtual Event, Australia                                                           Yue Zou, Bihuan Ban, Yinxing Xue, and Yun Xu
+
+
+      • Size filtering: In real code dataset, there are many functions              Considering the specialty of PDGs, we choose to implement the
+        that only have a return statement. This kind of clones have              approximate graph matching algorithm based on WL graph kernel.
+        no reference value for practical application. So, we focus               In all kinds of graph kernels, WL graph kernel can be applied to
+        on those PDG pairs which have meaningful size. And in                    directed and labeled graphs, and it is able to process the attributes
+        the detailed implementation, we set the size threshold as 6              of nodes in graphs. WL graph kernel has better time-consuming
+        lines, which is also a common filter standard of other clone             performance than the traditional kernels like Random-Walk or
+        detections like CCAligner [17].                                          Shortest-Path graph kernel [11]. Also, there are open source imple-
+      • Scale ratio filtering: We need to match PDGs in pairwise,                mentations of WL1 graph kernel used in bioinformatics to compare
+        and the pair have no point in real-world if the scale ratio of           protein structure and we can easily apply it to our tool with a sec-
+        two PDGs is too big, like one PDG size is 10 times than the              ondary development. Since WL graph kernel has great classification
+        other one. We filter the pairs if the scale ratio of two PDGs            performance and it is one of the best graph kernels at present, we
+        is bigger than the specific threshold.                                   choose to adopt our approximate graph matching algorithm based
+      • Numerical similarity filtering: We extract the numerical vec-            on WL graph kernel.
+        tors according to the characteristics of PDGs like the num-
+        ber of different kinds of nodes and edges. Node types are                Algorithm 2 Clone Detection With WL Graph Kernel Testing of
+        divided into variable declaration, assignment, control state-            Two Graphs
+        ment, function call and other kind of statements. Connecting
+        edges are classified as control dependency edge, data depen-             Input: the PDG pair (𝐺, 𝐺 ′ ), all nodes 𝑣 and labels 𝑙 (𝑣) of 𝑣 in 𝐺
+        dency edge and execution dependency edge according to the                     and 𝐺 ′ ; 𝑁 (𝑣) is the set of 𝑣 ′𝑠 neighbor nodes; 𝑚 is the number of
+        dependency relationship. Then we filter those PDG pairs if                    iterations of WL algorithm; 𝑇 is the threshold of PDG similarity
+        the cosine similarity of two vectors do not meet the thresh-                  of 𝐺 and 𝐺 ′ .
+        old we set. According to the results of repeated experiments,            Output: 𝑅 is the result set of PDG pairs after the clone detection
+                                                                                   1: function Clone(𝐺, 𝐺 ′, 𝑣, 𝑙 (𝑣), 𝑁 (𝑣), 𝑚,𝑇 )
+        we set a threshold of 0.9 for numerical similarity filtering.
+                                                                                   2:     for each pair (𝐺, 𝐺 ′ ) in candidate pairs do
+3.3.2 String similarity filtering. In the characteristic vectors of                3:          for 𝑖𝑡ℎ iteration in 𝑚 times do
+PDGs, some dimensions are string variables, like the function name,                4:              for each node 𝑣 in 𝐺 and 𝐺 ′ do
+                                                                                                                   Í
+input parameters, output variables. For each category classified                   5:                   𝑀 (𝑣) ← ( 𝑙 (𝑢)|𝑢∃𝑁 (𝑣))
+by numerical similarity, we need to calculate the string similarity                6:                   𝑠 (𝑣) ← 𝑀 (𝑣) sorted by ascending order
+between these string part of vector to filter some PDG pairs. Since                7:                   𝑠 (𝑣) ← 𝑙 (𝑣) + 𝑠 (𝑣)
+the string parts of vectors are short strings and the 𝐽𝑎𝑟𝑜 𝑊 𝑖𝑛𝑘𝑙𝑒𝑟                8:                   𝑙 (𝑣) ← 𝑓 (𝑠 (𝑣))
+                                                                                                                       Í        Í
+algorithm has a great effect on short text similarity calculations [14,            9:                   WHEN 𝑓 : ( ∗) →
+15], we choose the 𝐽𝑎𝑟𝑜 𝑊 𝑖𝑛𝑘𝑙𝑒𝑟 distance ratio [20] to measure the               10:                   STATISFY 𝑓 (𝑠 (𝑣)) = 𝑓 (𝑠 (𝑤))
+string similarity. The Jaro-Winkler algorithm gives the starting part             11:                   if and only if 𝑠 (𝑣) = 𝑠 (𝑤)
+a higher score for the same string, which defines a prefix range                  12:              end for
+𝑝. For the two strings to be matched, the prefix part has the same                13:              𝑤𝑖 ← (𝑚 − 𝑖 + 1)/𝑚
+length as the partial string of length 𝐿. Considering the diversity               14:              𝑘𝑖 = 𝑠𝑖𝑧𝑒𝑜 𝑓 (𝑠𝑎𝑚𝑒𝑙𝑎𝑏𝑒𝑙 (𝑣))/𝑠𝑖𝑧𝑒𝑜 𝑓 (𝑡𝑜𝑡𝑎𝑙 (𝑣))
+of string variables in reality, we only filter those PDG pairs which              15:          end for
+                                                                                                     Í
+𝐽𝑎𝑟𝑜 𝑊 𝑖𝑛𝑘𝑙𝑒𝑟 distance ratio less than 0.5.                                       16:          𝑘 ← ( 𝑘𝑖 ∗ 𝑤 𝑖 )
+                                                                                  17:          if 𝑘 > 𝑇 then
+      • Jaro Distance: Jaro distance 𝑑 𝑗 of given strings 𝑎, 𝑏 is 𝑑 𝑗 =           18:              𝑅 ← 𝑅 ∪ (𝐺, 𝐺 ′ )
+        1 ( 𝑚 + 𝑚 + (𝑚−𝑡 ) ), the 𝑚 is the number of matching char-               19:          end if
+        3 |𝑎 |    |𝑏 |     𝑚
+                                                                                  20:     end for
+        acters, and 𝑡 is half the number of transpositions, |𝑎| and |𝑏 |
+                                                                                  21: end function
+        is the length of string 𝑎 and 𝑏.
+      • Jaro Winkler Distance: Jaro Winkler distance 𝑑 𝑤 of give
+        strings 𝑎, 𝑏 is 𝑑 𝑤 = 𝑑 𝑗 + 𝐿 ∗ 𝑃 (1 − 𝑑 𝑗 ), 𝑑 𝑗 is the jaro distance      The steps of our proposed algorithm is described in detail as
+        of given strings 𝑎 and 𝑏, 𝐿 is the length of the prefix partial          following and shown in Algorithm 2:
+        match, 𝑃 is a range factor constant used to adjust the weight                 • Hash the label of each node in the PDG according to the
+        of the prefix match, but the value of 𝑃 cannot exceed 0.25,                     grammar category as the initial label of the node.
+        because the final score may exceed 1 point. The standard                      • Set the ℎ iterations for the WL algorithm. In the ℎ iterations,
+        default setting of 𝐽𝑎𝑟𝑜 𝑊 𝑖𝑛𝑘𝑙𝑒𝑟 is 𝑃 = 0.1.                                    each iteration collects the labels of the current node’s neigh-
+                                                                                        bors as a sequence, and compresses the label sequence into
+3.4     Approximate Graph Matching Based on WL                                          a new label by using local sensitive hashing algorithm.
+                                                                                      • If the labels of the two nodes are same after the iteration,
+        Graph Kernel
+                                                                                        it is considered that the subtrees with the two nodes as the
+After the simplification of PDG structures and filtering of PDG pairs,                  root node and the height of ℎ are isomorphic.
+we adopt the approximate graph matching algorithm to measure
+the similarity between the PDG pairs.                                            1 https://github.com/BorgwardtLab/GraphKernels.
+
+=== PDF PAGE 7 (1-based) ===
+CCGraph: a PDG-based code clone detector with approximate graph matching                                ASE ’20, September 21–25, 2020, Virtual Event, Australia
+
+
+      • Calculate the number of same node pairs between two PDGs,          datasets. In addition, there is no standard PDG tested benchmark
+        which is also the graph kernel value. If the graph kernel          to measure the accuracy and recall rate of clone detection methods.
+        values of the two PDGs satisfy the threshold range, the two        For this, we manually check the experiment results on the tested
+        PDGs are considered as PDG-based code clone candidates.            datasets.
+   Furthermore, considering the different diameters of different              For the PDG generation, we use Frama-C2 [23] to generate PDGs
+clone PDGs, we dynamically set the iterations number according             of C code. For Java programs, we choose the Java PDG generator
+to the diameter of the smaller PDG, and count the number of nodes          TinyPDG3 [24] based on an open source library. All PDGs of C and
+with the same label between PDGs after each iteration. In addition,        Java code are unified to .𝑑𝑜𝑡 file fomat. After the PDG generation,
+we add the weight factor (ℎ − 𝑛 + 1)/ℎ to the 𝑛𝑡ℎ iteration to give        we used Python scripts to parse .𝑑𝑜𝑡 files and transform these files
+higher weight to the lower iterations because each node in source          into the specified format for subsequent graph matching. In the
+code is more affected by its neighbors than the nodes far away.            implementation of approximate graph matching, we used Python
+                                                                           and C++ to calculate similarity based on some relative libraries. All
+3.5     Verifying                                                          experiments are executed on a same machine with Ubuntu 14.04LTS
+                                                                           operation system with a quad-core CPU and 8GB of memory.
+After the approximate graph matching based on WL graph kernel,
+we get the kernel value of PDG pairs. This step is to vefity whether
+                                                                           4.2     Experimental Datasets
+the candidates are code clones.
+    For each PDG pair, we calculate the WL graph kernel value              We performed experiments on CCGraph against the CCSharp [9]
+  (ℎ)                                                                      on C code and Oreo [15] on Java code on several code datasets.
+𝑘𝑊 𝐿 (𝐺 1, 𝐺 2 ) in the approximate graph matching, and we measure
+                                                                           These datasets include real-world and artificial code datasets. Since
+the similarity by the ratio of the kernel value to the total number
+                                                                           the PDG generation can only be applied to compilable code, we
+of nodes in two PDGs shown in 𝑆𝑒𝑐𝑡𝑖𝑜𝑛 2. When the similarity
+                                                                           choose some high quality real-world code datasets and develop
+exceed the threshold we set before, we consider the code fragments
+                                                                           some artificial code datasets from the real-world codes by kinds
+of the PDG pair are 𝑐𝑜𝑑𝑒 𝑐𝑙𝑜𝑛𝑒. In order to further verify whether
+                                                                           of disguises to simulate the generation of code clones in daily pro-
+two PDGs are cloned or not, we use the asymmetric coefficient of
+                                                                           gramming [21, 22]. The details of these code datasets are shown in
+𝐷𝑖𝑐𝑒 𝑠𝑖𝑚𝑖𝑙𝑎𝑟𝑖𝑡𝑦 [21] from another point of view, which is defined
+                                                                           the Table 2, including their LoC (Line of Code), number of functions
+as follows:
+                                        (ℎ)                                and description.
+                                       𝑘 (𝐺 1, 𝐺 2 )
+                      𝑠𝑖𝑚(𝐺 1, 𝐺 2 ) = 𝑊 𝐿               .
+                                      𝑚𝑖𝑛(|𝑉1 | , |𝑉2 |)                                      Table 2: The Details of Datasets
+where 𝑉1 and 𝑉2 are the node sets of PDG 𝐺 1 and 𝐺 2 . The similarity
+threshold is chosen with best results among plenty of repeated                  Datasets         LoC      Functions      Description
+experiments. Therefore, we verify the two PDGs are code clones
+                                                                                 BCB-5           4374        186         Decompress zip archive.
+when their similarity is greater than or equal to 0.9.                           BCB-11          8384        338         Initialize Java Eclipse projects.
+                                                                                 BCB-15          9895        478         Load custom font.
+4     EVALUATION                                                                 BCB-38          9572        481         Get MAC address string.
+In this section, we design and implement the experiments of our                   Less          19233        286         Linux text viewer.
+clone detection CCGraph and empirical evaluation against other                 PostgreSQL       86096       1134         dataset server.
+                                                                               Artificial-1      1658        100         Generated artificial dataset.
+state-of-the-art clone detectors. Firstly, we begin by introducing
+                                                                               Artificial-2     20157        384         Generated artificial dataset.
+the environment configuration of our experiments. We introduce
+the datasets used in experiments in detail and explain the reasons
+for choosing these datasets.                                                  For C code, we choose the 𝑙𝑒𝑠𝑠 and several modules of 𝑃𝑜𝑠𝑡𝑔𝑟𝑒𝑆𝑄𝐿
+                                                                           datasets. The 𝑙𝑒𝑠𝑠 dataset is used in CCSharp [9], GPLAG [5] and
+4.1     Experimental Configuration                                         the 𝑃𝑜𝑠𝑡𝑔𝑟𝑒𝑆𝑄𝐿 program is also common used in kinds of clone
+                                                                           detector. And we also generate two artificial datasets based on some
+Since most of current PDG-based clone detectors are commercial
+                                                                           real-world dataset like leetcode or cJSON by using a mixture of four
+that are not open source, we choose the open source and executable
+                                                                           types disguises [25]: format changing (i.e. change spaces, comments
+tools to be compared with our approach. For C code, we choose the
+                                                                           and layouts), renaming/type chaning (i.e. rename varibles, func-
+latest PDG-based clone detector CCSharp [9] for comparison both
+                                                                           tions), reordering statements, and control substitution (i.e. replacing
+on artificial datasets and real-world datasets. However, CCSharp
+                                                                           𝑤ℎ𝑖𝑙𝑒 loops with 𝑓 𝑜𝑟 ). These disguises do not affect the overall syn-
+can not be implemented to Java code. For Java code, there is no
+                                                                           tactic structure and PDG dependencies in original code, but may
+targeted PDG-based clone detector. There is a clone detector Oreo
+                                                                           not be detected by those tools using subgraph isomorphism.
+[15] based on deep learning to be regarded as the candidate. In the
+                                                                              For Java code, we choose BigCloneBench, which is common
+process of model training, Oreo uses some informations of PDG as
+                                                                           used in all kinds of clone detectors. BigCloneBench [27] is a large
+a part of feature input, so it can find some PDG-based code clones.
+                                                                           benchmark of manually validated clones by mining the big real-
+Therefore, we choose Oreo for comparison on Java datasets. We
+                                                                           world dataset IJaDataset-2.0 [28] (25,000 Java systems). The current
+also compare CCGraph with other baselines such as token-based
+(SourcererCC, in order to find out more Type-3 clones, we set a 80%        2 http://frama-c.com/index.html.
+
+threshold), AST-based (Deckard,also with a 80% threshold) on Java          3 https://github.com/YoshikiHigo/TinyPDG
+
+=== PDF PAGE 8 (1-based) ===
+ASE ’20, September 21–25, 2020, Virtual Event, Australia                                                         Yue Zou, Bihuan Ban, Yinxing Xue, and Yun Xu
+
+
+public release version of BigCloneBench contains 8 million clones                      Table 4: Efficiency of Filtering Strategies on Datasets
+of 43 distinct functionalities [29]. Considering the BigCloneBench
+is too big for us to calculate the accuracy and recall of our method,                                           Theoretical      PDG pairs        Ration of
+we randomly select several small functionalities.                                                               PDG pairs      after filtering    filtering
+                                                                                     Datasets        Language
+                                                                                                                    (A)              (B)            (B/A)
+4.3     Experimental Results                                                         Less               C          81796            1316            1.61%
+4.3.1 Efficiency of PDG Structure Simplification. We have tested                     PostgreSQL         C        1285956           22247            1.73%
+the effect of PDG structure simplification on several typical datasets.              Artificial-1       C          10000             562            5.62%
+These strategies effectively simplify PDGs and do not damage the                     Aritificial-2      C         147456            2708            1.84%
+original semantic information and the results of efficiency are                                                 Theoretical      PDG pairs        Ration of
+shown in Table 3. According to the research [16], the time costed                    Datasets        Language   PDG pairs      after filtering    filtering
+by graph matching grows exponentially with the growth of the                                                        (A)              (B)            (B/A)
+numbers of nodes and edges in graph. Therefore, the reduction of                     BCB-5             Java        34596             596            1.72%
+PDG size by removing meaningless nodes and merging function                          BCB-11            Java       114244            1805            1.58%
+call sub-PDGs is very beneficial to the following processes of clone                 BCB-15            Java       228484            3309            1.45%
+detection.                                                                           BCB-38            Java       231361            3424            1.48%
+
+      Table 3: Efficiency of PDG Structure Simplification
+                                                                                   Table 5: The Number of Misfiltered Clone Pairs of 3 Sam-
+                                   Size of           Size of         Ratio of      pling Examinations
+  Datasets        Language      original files   simplification   simplification
+                                     (A)            files (B)         (B/A)                                         1st           2nd               3rd
+  Less                C            871KB             732KB             0.84          Datasets        Language   experiment     experiment        experiment
+  PostgreSQL          C            19.7MB            9.6MB             0.49          Less               C          0/20           0/20              0/20
+  Artificial-1        C            436KB             408KB             0.94
+                                                                                     PostgreSQL         C          0/20           1/20              0/20
+  Aritificial-2       C             1.1M             891KB             0.79
+                                                                                     Artificial-1       C          0/20           0/20              0/20
+                                   Size of           Size of         Ratio of
+                                                                                     Aritificial-2      C          0/20           0/20              0/20
+  Datasets        Language      original files   simplification   simplification
+                                     (A)            files (B)         (B/A)                                         1st           2nd               3rd
+                                                                                     Datasets        Language   experiment     experiment        experiment
+  BCB-5              Java          559KB            482KB             0.86
+  BCB-11             Java          955KB            799KB             0.84           BCB-5             Java        0/20           0/20              0/20
+  BCB-15             Java          1.3MB            1.1MB             0.85           BCB-11            Java        0/20           1/20              0/20
+  BCB-38             Java          1.2MB            998KB             0.81           BCB-15            Java        0/20           0/20              0/20
+                                                                                     BCB-38            Java        0/20           0/20              1/20
+
+4.3.2 Efficiency of Filtering Strategies. The filtering phase is very
+important in the whole clone detection. We have implemented the                    and measure the scalability on datasets of different scales, which
+heuristic filtering strategies and the results of filtering efficiency             results are shown in Figure 5 and Table 9.
+are shown in Table 4. The filtering ratio refers to the number of
+PDG pairs after filtering divided by the number of total PDG pairs.                   Total number of clones. We generate PDGs and detect clones in
+It can exclude the majority of candidate PDG pairs, and helps to                   function granularity. We measure the total number of clones by the
+accelerate the graph matching process later.                                       number of clone pairs against other tools. In the PDG filtering stage,
+   In order to ensure the accuracy of our filtering strategies, we                 we exclude those code which number of lines are less than 6. And
+conducted a sample check on the filtered PDG pairs. We randomly                    from the clone results shown in Table 6, we know that CCGraph
+seletected 20 PDG pairs for three times from the filtered PDG pairs                has obvious advantages in the number of clone pairs than CCSharp
+of each dataset, and determine the number of clone pairs misfiltered               [9] in all 𝐶 datasets and Oreo [15] in all 𝐽𝑎𝑣𝑎 datasets. As shown in
+in the 20 PDG pairs. According to the results shown in Table 5, the                Table 6, our approach can find more than twice as many PDG-based
+number of our misfiltered clone pairs are very small, which also                   clone pairs on Artificial-2 dataset as CCSharp. And even in the
+verifies the effectiveness of our filtering strategies.                            worst case, we can find 30 percent more PDG-based clone pairs
+                                                                                   than Oreo. The reason is that we adopt the approximate graph
+4.3.3 Results of Code Clone Detection. We evaluate CCGraph with                    matching, reduce the requirement of clone matching and find some
+the total clone quantity, clone quality, time cost and scalability. The            clone pairs missed by other tools.
+total clone quantity is the total number of clone pairs detected by
+tools, which is shown in Table 6. The clone quality includes the                       Clone quality. Clone quality includes precision, recall rate and
+precision, recall rate and the F1-score we calculated, which is shown              F1-score value. And we choose those small code datasets to make
+Table 7 and Table 8. The total clone result used in the recall rate is             it easier to calculate the precision and recall rate. For precision, we
+the union of the results generated by all tools. Also, we compare                  manually check and evaluate all the detected clone pairs to judge if
+the time cost of the whole clone detection process with CCSharp                    they are real clones, and calculate the ratio of all true positive code
+
+=== PDF PAGE 9 (1-based) ===
+CCGraph: a PDG-based code clone detector with approximate graph matching                                      ASE ’20, September 21–25, 2020, Virtual Event, Australia
+
+
+
+
+                    35
+                                                                                       16
+                    30
+                                                                                       14
+                    25                                                                 12
+
+                    20                                                                 10
+                                                                                        8
+                    15
+                                                                                        6
+                    10
+                                                                                        4
+                      5                                                                 2
+
+                      0                                                                 0
+                             Less       PostgreSQL     Artificial-1   Artificial-2             Less      PostgreSQL     Artificial-1   Artificial-2
+
+                                           CCSharp     CCGraph                                             CCSharp     CCGraph
+
+
+
+
+                                 (a) In preprocessing stage(min)                                   (b) In graph matching stage(s)
+
+
+                                      Figure 5: Time cost comparison between CCSharp and CCGraph
+
+
+Table 6: The Number of Clones Detected by CCGraph                                    structure but the function of their programs are obviously different.
+Against Other Tools                                                                  But our recall rate is significantly higher than CCShrap and Oreo. In
+                                                                                     the best case, our recall rate is almost 40% higher than CCsharp and
+        Dataset           Language        CCSharp         CCGraph                    Oreo. In addition, we calculate the F1-score value, and CCGraph is
+                                                                                     at least 10% better than CCSharp and Oreo on each dataset.
+        Less                 C               12              23
+        PostgreSQL           C              149             297
+                                                                                               Table 7: Clone Results on C Code Dataset
+        Artificial-1         C              105             183
+        Artificial-2         C               74             162
+                                                                                        Datasets          Tools            Accuracy          Recall    F1-score
+        Dataset           Language         Oreo           CCGraph
+                                                                                                          CCSharp            0.92             0.52       0.64
+        BCB-5               Java             47              76                         Less              CCGraph            0.89             0.81       0.85
+        BCB-11              Java            129             161
+                                                                                                          CCSharp            0.99             0.56       0.72
+        BCB-15              Java             75             138                         PostgreSQL        CCGraph            0.91             0.85       0.83
+        BCB-38              Java            102             131
+                                                                                                          CCSharp            0.94             0.63       0.75
+                                                                                        Artificial-1      CCGraph            0.90             0.80       0.85
+clones to all clones we detected.                                                                         CCSharp            0.99             0.42       0.59
+                                        𝑇𝑃                                              Artificial-2      CCGraph            0.92             0.81       0.86
+                          𝑃𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 =
+                                     𝑇𝑃 + 𝐹𝑃
+where 𝑇 𝑃 is the true positive PDG-based code clones reported by
+the tool, and 𝐹 𝑃 refers the wrong clone pairs we detected. For recall                   Time cost and scalability. Considering the PDG-based clone de-
+rate, we define                                                                      tection is more time-consuming than other types clone detection
+                                      𝑇𝑃                                             tools and the time of training datasets in Oreo [15] is hard to mea-
+                          𝑅𝑒𝑐𝑎𝑙𝑙 =
+                                   𝑇𝑃 + 𝐹𝑁                                           sure, we only compare the time cost with CCSharp [9]. We divide
+where 𝑇 𝑃 is same as precision definition, 𝐹 𝑁 refers the true clone                 the overall time cost into preprocessing and graph matching time
+pairs we missed, and the denominator 𝑇 𝑃 + 𝐹 𝑁 is the union result                   cost. And the time cost results are shown in Figure 5. The prepro-
+of the two tools as the total detected clones (removing duplicate                    cessing stage includes PDG generation, structure optimization and
+and 𝐹 𝑃 elements). We also define                                                    filtering. From the results shown in Figure 5, CCGraph reduces the
+                               2 ∗ 𝑃𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 ∗ 𝑅𝑒𝑐𝑎𝑙𝑙                                time cost both on preprocessing and graph matching stages, and
+                 𝐹 1 − 𝑠𝑐𝑜𝑟𝑒 =
+                                 𝑃𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 + 𝑅𝑒𝑐𝑎𝑙𝑙                                  accelerates the graph matching greatly than CCSharp [9].
+   From the results shown in table 7 and 8, we find that our results                     Also, to ensure that CCGraph can be extended to larger code
+are slightly less than CCSharp and Oreo in accuracy, when we also                    datasets than CCSharp, we compare the runtime of the two tools
+maintain a high level of accuracy which is acceptable in reality.                    on datasets of different sizes. From the results shown in Table
+The little loss of accuracy is because of the examples that the two                  9,CCGraph is much slower than the token-based detector Oreo
+PDGs share almost the same data and control dependencies in their                    because of the high time-consuming of graph algorithms. However,
+
+=== PDF PAGE 10 (1-based) ===
+ASE ’20, September 21–25, 2020, Virtual Event, Australia                                                      Yue Zou, Bihuan Ban, Yinxing Xue, and Yun Xu
+
+
+          Table 8: Clone Results on Java Code Dataset                              Among the token-based code clone detections, they extracted
+                                                                                the tokens of source code by lexical analysis tools firstly, and then
+    Datasets       Tools                Accuracy           Recall    F1-score   compared thosed tokens instead of keywords since tokens can tol-
+                                                                                erate more different identifiers. CCFinder [35] is a popular clone
+                   SourcererCC              1               0.02       0.03     detector based on token, but it does not support detecting the struc-
+                   Deckard                0.22              0.35       0.27     tural similarity of code fragments. CCAligner [17] is good at those
+    BCB-5          Oreo                   0.94              0.63       0.75     clones with relatively concentrated changes but it will misses many
+                   CCGraph                0.87              0.94       0.90     PDG-based clones which CCGraph can detect. SourcererCC [38]
+                   SourcererCC            0.88              0.08       0.14     performed great in detecting format transformation and renaming
+                   Deckard                0.19              0.32       0.24     changes, but only limited to the token similarity. This also means
+    BCB-11         Oreo                   0.96              0.73       0.80     that they are not suitable for the detection of PDG-based clones.
+                   CCGraph                0.96              0.91       0.93        Among the AST-based code clone detections, CloneDR [39] and
+                                                                                Deckard [40] transformed the code into abstract syntax tree (AST)
+                   SourcererCC            0.75              0.03       0.05
+                                                                                and detected the similar subtrees to find code clones. But the trans-
+                   Deckard                0.24              0.22       0.23
+                                                                                formation lost much structure information of code and this may
+    BCB-15         Oreo                   0.96              0.56       0.71
+                                                                                lead to the missing of many code clones.
+                   CCGraph                0.86              0.92       0.89        Among the PDG-based clone detections. Duplix [41] and PDG-
+                   SourcererCC              1               0.09       0.16     DUP [42] both detected PDG-based clones using program slicing
+                   Deckard                0.29              0.30       0.29     and subgraph isomorphism matching. And these methods all suf-
+    BCB-38         Oreo                   0.98              0.66       0.79     fered from high time consuming and missed many clones, which
+                   CCGraph                0.95              0.83       0.89     can not be applied to large scale code datasets. To improve the
+                                                                                time performance, Sargsyan et al. [43] modified PDG generated
+                                                                                by LLVM through removing isolated nodes, GPLAG [5] used a
+CCGraph is than CCSharp, the PDG-based detector on all datasets,
+                                                                                lossy filter to reduce the plagiarism scale by characteristic vectors,
+and it can also run normally on large-scale datasets, while CCSharp
+                                                                                CCSharp [9] proposed some new PDG modification and filtering
+can not be extended to large-scale datasets at the level of 50𝑀 lines
+                                                                                stragegies. However, these PDG-based clone methods only applied
+of code. This also shows that CCGraph has better scalability than
+                                                                                some simple filtering strategies, and used the exact graph matching
+CCSharp at least.
+                                                                                algorithm like subgraph isomorphism to detect PDG-based clones.
+                                                                                These methods still have a unacceptable time consumption and
+Table 9: Time Cost of CCGraph and CCSharp on Datasets of
+                                                                                poor scalabilities. alse they have a big loss of code clones.
+Different Sizes
+                                                                                   Among the metric-based clone detections, they extracted the
+                                                                                charateristic vectors of source code and calculated the vector sim-
+    LoC           10K       1M           10M          30M              50M      ilarities to detect code clones. Patenaude et al. [44] divided the
+    CCSharp       14s    1h12m3s       8h1m18s          –               –       code to different categories using the metrics. Balazinska et al. [45]
+    Oreo           2s      4m22s        24m12s      2h11m30s        4h36m12s    and Mayrand et al. [46] both extracted the vectors from the AST
+    CCGraph        4s     15m10s      2h21m10s      7h22m12s        17h48m21s
+                                                                                of source code. These methods based on metrics are very fast on
+                                                                                detecting clones but they have high false positive rate and miss
+                                                                                much clones because of the rough comparison.
+5    RELATED WORK                                                                  There also exists some other techniques for clone detection, such
+There have been many kinds of code clone detection methods in the               as detections based on deep learning techniques and code behaviors.
+literature, Rattan et al. [30] summarized many tools in his research.           Wei et al. [47] proposed an approach to learn the representations
+These methods can be divided into text-based [31, 32, 33, 34], token-           and Hamming distance of source code and detected code clones.
+based [16, 35, 36, 37], AST-based [38, 39], PDG-based [5, 9, 41, 42,            White et al. [48] proposed a model to detect code clones by learning
+43], metric-based [44, 45, 46] and others like deep learning [22, 47,           the discriminating features of source code. Yu [50] used a new tree-
+48, 49].                                                                        based convolution to detect semantic clones, by capturing both
+    Among the text-based code clone detections, the representative              the structural information of a code fragment from its AST and
+work compared the code fragments in the form of text. Baker [31]                lexical information from code tokens. Oreo [15] and DeepSim [22]
+proposed a parametric matching algorithm, regarded the code line                used the clones that are almost identical or very similar to train
+as a long string, and used the string matching algorithm to detect              the deep learning model, the ability of detecting clones with large
+completely consistent code clones. NiCad [33] detected the poten-               difference is limited. The deep learning methods always have too
+tial code clones using the longest common string subsequences                   much dependency on the training data and lack interpretability,
+comparison. Johnson [34] developed the clone detection by a fin-                which may not suitable for some special scenarios. The experiments
+gerpringting technique. However, these clone detections based on                in Section 4 show that CCGraph can find more PDG-based code
+text can only detect those exactly same code clones or clones with              clones than Oreo.
+high text similarity. Considering the various practical clone detec-
+tion scenarios, the industry pays more attention on PDG-based
+clone detections recently [30].
+
+=== PDF PAGE 11 (1-based) ===
+CCGraph: a PDG-based code clone detector with approximate graph matching                                            ASE ’20, September 21–25, 2020, Virtual Event, Australia
+
+
+6    LIMITATIONS                                                                       [6] Stefan Bellon, Rainer Koschke, Giulio Antoniol, Jens Krinke, and Ettore Merlo.
+                                                                                           2007. Comparison and evaluation of clone detection tools.IEEE Transactions on
+There are also some limitations in our research work. One limitation                       software engineering, 33(9), 577-591.
+is that there is no any opened and standard benchmark datasets                         [7] David S Johnson. 1987. The NP-completeness column: An ongoing guide. Journal
+                                                                                           of algorithms, 8(2), 285-303.
+for PDG-based clone detection methods. We can not compare our                          [8] Mark Gabel, Lingxiao Jiang and Zhendong Su. 2008. Scalable detection of semantic
+approach with other clone detectors on any unified datasets. There-                        clones. In Proceedings of the 30th international conference on Software engineering.
+fore, we need to perform our experiments on the code datasets                              ACM, 321-330.
+                                                                                       [9] Min Wang, Pengcheng Wang, Yun Xu. 2017. CCSharp: An efficient three-phase
+to manually verify the accuracy and recall rate of clone results.                          code clone detector using modified PDGs. In 24th Asia-Pacific Software Engineer-
+Another limitation is that the existing PDG generators need to be                          ing Conference (APSEC). IEEE, 100-109.
+improved. Now both of the PDG generation of C code and Java                           [10] Navarin N, Sperduti A. 2017. Approximated Neighbours MinHash Graph Node
+                                                                                           Kernel. European Symposium on Artificial Neural Networks Computational Intelli-
+code can only be suited to the compliable programs. This requires                          gence and Machine Learning, ESANN, 281-286.
+that the test datasets must be a complete compilable program and                      [11] Nino Shervashidze, Pascal Schweitzer, Erik Jan van Leeuwen, Kurt Mehlhorn
+                                                                                           and Karsten M. Borgwardt. 2011. Weisfeiler-lehman graph kernels. Journal of
+also limits the scope of PDG-based clone detection. Therefore, we                          Machine Learning Research, 12(Sep), 2539-2561.
+need to develop a PDG generator for code segments. In this way,                       [12] Foggia Pasquale, Percannella G, Vento M. 2014. Graph matching and learning in
+our approach can be more widely processed.                                                 pattern recognition in the last 10 years. International Journal of Pattern Recognition
+                                                                                           and Artificial Intelligence, 28(01), 1450001.
+                                                                                      [13] Ya Jun, Liu Z S, Chang, Q. 2016. The network attack graph analysis based on
+7    CONCLUSION AND FUTURE WORK                                                            graph kernel. Journal of Military Communications Technology, Vol.37: 20-25.
+                                                                                      [14] Gaüzère B, Brun L, Villemin D. 2011. Two New Graph Kernels and Applications
+In this paper, we propose a PDG-based clone detection work with                            to Chemoinformatics. In International Conference on Graph-based Representations
+approximate graph matching algorithm called CCGraph. We in-                                in Pattern Recognition.
+                                                                                      [15] Vaibhav Saini, Farima Farmahinifarahani, Yadong Lu, Pierre Baldi, and Cristina
+troduce the preprocessing stage to optimize the structure of PDGs                          Lopes. 2018. Oreo: Detection of Clones in the Twilight Zone. In Proceedings
+and filter the scale of candidate clone pairs by a two-stage strategy.                     of the 26th ACM Joint Meeting on European Software Engineering Conference
+Moreover, we design the approximate graph matching algorithm                               and Symposium on the Foundations of Software Engineering (ESEC/FSE’18). ACM,
+                                                                                           354–365.
+based on WL graph kernel to detect the clone pairs. Finally, we                       [16] Krinke Jens. 2001. Identifying similar code with program dependence graphs. In
+evaluate CCGraph with clone quantity, clone quality and scalability                        Proceedings Eighth Working Conference on Reverse Engineering. IEEE, 301-309.
+against Oreo [15] and CCSharp [9]. The experiment results show                        [17] Pengcheng Wang, Jeffrey Svajlenko, Yanzhao Wu, Yun Xu, Chanchal K Roy. 2018.
+                                                                                           CCAligner: a token based large-gap clone detector. In Proceedings of the 40th
+that our method perform the better recall rate and F1-score value                          International Conference on Software Engineering. ACM, 1066-1077.
+while maintaining a high accuracy.                                                    [18] William W Cohen, Pradeep Ravikumar, and Stephen E Fienberg. 2003. A Com-
+                                                                                           parison of String Distance Metrics for Name-Matching Tasks. IIWeb, Vol. 73-78.
+   In the future work, we plan to further improve the performance                     [19] Van der Loo and Mark PJ. 2014. The stringdist package for approximate string
+of CCGraph. And we will consider investigating the PDG genera-                             matching.The R Journal 6.1, 111-122.
+tion of more types of programming languages. Besides, we want to                      [20] Feigenbaum James. 2016. JAROWINKLER: Stata module to calculate the Jaro-
+                                                                                           Winkler distance between strings.
+integrate the CCGraph into the code development and management                        [21] Ricardo Baeza-Yates and Berthier Ribeiro-Neto. 1999. Modern information re-
+systems. Meanwhile, we can develop some downstream applica-                                trieval.ACM press New York,Vol. 463..
+tions based on CCGraph, such as software structure analysis, bug                      [22] Gang Zhao and Jeff Huang. 2018. Deepsim: deep learning code functional simi-
+                                                                                           larity. In Proceedings of the 2018 26th ACM Joint Meeting on European Software
+detection and other software analysis applications.                                        Engineering Conference and Symposium on the Foundations of Software Engineering.
+                                                                                           ACM, 141-151.
+                                                                                      [23] Cuoq P., Kirchner F., Kosmatov N., Prevosto V., Signoles J. and Yakobowski B.
+ACKNOWLEDGMENTS                                                                            2012. Frama-c. In International Conference on Software Engineering and Formal
+This work is supported by the National Natural Science Foundation                          Methods. Springer,233-247.
+                                                                                      [24] Higo Yoshiki, and Shinji Kusumoto. 2011. Code clone detection on specialized
+of China (Grant No.61672480 and No. 61972373) and the Program for                          PDGs with heuristics. In European Conference on Software Maintenance and
+Excellent Graduate Students in Collaborative Innovation Center of                          Reengineering. IEEE, 75-84.
+                                                                                      [25] Gang Zhang, Xin Peng, Zhenchang Xing, and Wenyun Zhao. 2012. Cloning
+High Performance Computing. The research of Dr. Xue is supported                           practices: Why developers clone and what can be changed. In IEEE International
+by CAS Pioneer Hundred Talents Program.                                                    Conference on Software Maintenance (ICSM). IEEE, 285-294.
+                                                                                      [26] Yun Lin, Zhenchang Xing, Yinxing Xue, Yang Liu, Xin Peng, Jun Sun. 2014.
+                                                                                           Detecting differences across multiple instances of code clones. In Proceedings of
+REFERENCES                                                                                 the 36th International Conference on Software Engineering. ACM, 164-174.
+                                                                                      [27] Jeffrey Svajlenko and Chanchal K. Roy. 2015. Evaluating Clone Detection Tools
+                                                                                           with BigCloneBench. In Proceedings of the 31st International Conference on Soft-
+ [1] Audris Mockus. 2007. Large-scale code reuse in open source software. In First         ware Maintenance and Evolution (ICSME 2015). IEEE, 131-140.
+     International Workshop on Emerging Trends in FLOSS Research and Development.     [28] Ambient Software Evoluton Group. (2013). IJaDataset 2.0. http://secold.org/
+     IEEE, 7-7.                                                                            projects/seclone.
+ [2] Suresh Thummalapenta, Luigi Cerulo, Lerina Aversano, and Massimiliano            [29] Svajlenko Jeffrey and Chanchal K. Roy. 2016. Bigcloneeval: A clone detection tool
+     Di Penta. 2010. An empirical study on the maintenance of source code                  evaluation framework with bigclonebench. In 2016 IEEE International Conference
+     clones.Empirical Software Engineering 15, 1 (2010), 1–34.                             on Software Maintenance and Evolution (ICSME). IEEE, 596-600.
+ [3] Yun Lin, Zhenchang Xing, Xin Peng, Yang Liu, Jun Sun, Wenyun Zhao and            [30] Rattan Dhavleesh, Rajesh Bhatia, and Maninder Singh. 2013. Software clone
+     Jinsong Dong. 2014. Clonepedia: Summarizing code clones by common syntactic           detection: A systematic review. Information and Software Technology 55.7 (2013),
+     context for software maintenance. In IEEE International Conference on Software        1165-1199.
+     Maintenance and Evolution. IEEE, 341-350.                                        [31] Baker Brenda S. 1997. Parameterized duplication in strings: Algorithms and an
+ [4] Jingyue Li and Michael D. Ernst. 2012. CBCD: Cloned buggy code detector. In           application to software maintenance. SIAM Journal on Computing 26.5 (1997),
+     Proceedings of the 34th International Conference on Software Engineering. IEEE        1343-1362.
+     Press, 310-320.                                                                  [32] Baker Brenda S. 1995. On finding duplication and near-duplication in large
+ [5] Chao Liu, Chen Chen, Jiawei Han, and Philip S Yu. 2006. GPLAG: detection of           software systems. In Proceedings of 2nd Working Conference on Reverse Engineering.
+     software plagiarism by program dependence graph analysis. In Proceedings of           IEEE, 86-95.
+     the 12th ACM SIGKDD international conference on Knowledge discovery and data     [33] Cordy James R. and Chanchal K Roy. 2011. The NiCad clone detector. In 2011
+     mining. ACM, 872–881.                                                                 IEEE 19th International Conference on Program Comprehension. IEEE, 219-220.
+
+=== PDF PAGE 12 (1-based) ===
+ASE ’20, September 21–25, 2020, Virtual Event, Australia                                                                        Yue Zou, Bihuan Ban, Yinxing Xue, and Yun Xu
+
+
+[34] Johnson J Howard. 1994. Substring Matching for Clone Detection and Change            [43] Sargsyan, Sevak, Kurmangaleev S, Belevantsev A and Avetisyan A. 2016. Scalable
+     Tracking.ICSM. Vol. 94, 120-126.                                                          and accurate detection of code clones. Programming and Computer Software 42.1
+[35] Kamiya Toshihiro, Shinji Kusumoto, and Katsuro Inoue. 2002. CCFinder: a                   (2016), 27-33.
+     multilinguistic token-based code clone detection system for large scale source       [44] J-F Patenaude, Ettore Merlo, Michel Dagenais, and Bruno Laguë. 1999. Extending
+     code.IEEE Transactions on Software Engineering 28.7 (2002), 654-670.                      software quality assessment techniques to java systems. In Proceedings of the 7th
+[36] Zhenmin Li, Shan Lu, Suvda Myagmar and Yuanyuan Zhou. 2004. CP-Miner: A                   International Workshop on Program Comprehension. IEEE, 49–56.
+     Tool for Finding Copy-paste and Related Bugs in Operating System Code.OSdi.          [45] Magdalena Balazinska, Ettore Merlo, Michel Dagenais, Bruno Lague, and Kostas
+     Vol. 4. No. 19, 289-302.                                                                  Kontogiannis. 1999. Measuring clone based reengineering opportunities. In Pro-
+[37] Göde Nils and Rainer Koschke. 2009. Incremental clone detection. In 2009 13th             ceedings of the 6th International Software Metrics Symposium. IEEE, 292–303.
+     European Conference on Software Maintenance and Reengineering. IEEE, 219-228.        [46] Manishankar Mondal, Chanchal K Roy, and Kevin A Schneider. 2015. A compara-
+[38] Hitesh Sajnani, Vaibhav Saini, Jeffrey Svajlenko, Chanchal K.Roy and Cristina             tive study on the bug-proneness of different types of code clones. In Proceedings of
+     V Lopes. 2016. Sourcerercc: Scaling code clone detection to big-code. In 2016             the IEEE International Conference on Software Maintenance and Evolution (ICSME
+     IEEE/ACM 38th International Conference on Software Engineering (ICSE). IEEE,1157-         15). IEEE, 91–100.
+     1168.                                                                                [47] Huihui Wei and Ming Li. 2017. Supervised Deep Features for Software Functional
+[39] Ira D Baxter, Andrew Yahin, Leonardo Moura, Marcelo Sant Anna and Lorraine                Clone Detection by Exploiting Lexical and Syntactical Information in Source Code.
+     Bier. 1998. Clone detection using abstract syntax trees. In Proceedings of the            In Proceedings of the 26th International Joint Conference on Artificial Intelligence
+     International Conference on Software Maintenance. IEEE, 368–377.                          (IJCAI 17). 3034–3040.
+[40] Lingxiao Jiang, Ghassan Misherghi, Zhendong Su and Stephane Glondu. 2007.            [48] Martin White, Michele Tufano, Christopher Vendome, and Denys Poshyvanyk.
+     Deckard: Scalable and accurate tree-based detection of code clones. In Proceedings        2016. Deep learning code fragments for code clone detection. In Proceedings of
+     of the 29th International Conference on Software Engineering. IEEE Computer               the 31st IEEE/ACM International Conference on Automated Software Engineering.
+     Society, 96–105.                                                                          ACM, 87–98.
+[41] Jens Krinke. 2001. Identifying similar code with program dependence graphs. In       [49] Heejung Kim, Yungbum Jung, Sunghun Kim, and Kwankeun Yi. 2011.
+     Proceedings of Eighth Working Conference on Reverse Engineering. IEEE, 301–309.           MeCC:memory comparison-based clone detector. In Proceedings of the 33rd Inter-
+[42] Raghavan Komondoor and Susan Horwitz. 2001. Using slicing to identify du-                 national on Software Engineering. ACM, 301–310.
+     plication in source code. In International Static Analysis Symposium. Springer,      [50] Hao Yu, Wing Lam, Long Chen, Ge Li, Tao Xie and Qianxiang Wang. 2019. Neural
+     40–56.                                                                                    detection of semantic code clones via tree-based convolution. In IEEE/ACM 27th
+                                                                                               International Conference on Program Comprehension (ICPC). IEEE, 2019: 70-80.
+
