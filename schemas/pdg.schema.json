@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reusable PDG interchange draft",
+  "description": "Structural contract only. Semantic validation and a versioned extraction/matching profile are required separately.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile", "producer", "sources", "function", "symbols", "definitions", "memory_locations", "nodes", "edges", "extraction_evidence"],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "profile": {"$ref": "#/$defs/profile"},
+    "producer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "version", "language", "language_version", "configuration"],
+      "properties": {
+        "name": {"$ref": "#/$defs/id"}, "version": {"$ref": "#/$defs/id"},
+        "language": {"$ref": "#/$defs/id"}, "language_version": {"$ref": "#/$defs/fact"},
+        "configuration": {"type": "object"}
+      }
+    },
+    "sources": {
+      "type": "array", "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "path", "content_identity"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"}, "path": {"$ref": "#/$defs/id"},
+          "content_identity": {"$ref": "#/$defs/fact"}
+        }
+      }
+    },
+    "function": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "qualified_name", "source_span", "inputs", "outputs", "interface_completeness", "reference_count"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "name": {"$ref": "#/$defs/fact"},
+        "qualified_name": {"$ref": "#/$defs/fact"}, "source_span": {"$ref": "#/$defs/span"},
+        "inputs": {"type": "array", "items": {"$ref": "#/$defs/parameter"}},
+        "outputs": {"type": "array", "items": {"$ref": "#/$defs/parameter"}},
+        "interface_completeness": {"$ref": "#/$defs/capability"},
+        "reference_count": {"$ref": "#/$defs/countFact"}
+      }
+    },
+    "symbols": {
+      "type": "array", "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "name", "scope_id", "role", "type"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"}, "name": {"$ref": "#/$defs/fact"},
+          "scope_id": {"$ref": "#/$defs/id"}, "role": {"enum": ["parameter", "local", "global", "capture", "receiver", "output", "other"]},
+          "type": {"$ref": "#/$defs/fact"}, "extensions": {"$ref": "#/$defs/extensions"}
+        }
+      }
+    },
+    "definitions": {
+      "type": "array", "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "node_id"],
+        "anyOf": [{"required": ["symbol_id"]}, {"required": ["location_id"]}],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"}, "node_id": {"$ref": "#/$defs/id"},
+          "symbol_id": {"$ref": "#/$defs/id"}, "location_id": {"$ref": "#/$defs/id"}
+        }
+      }
+    },
+    "memory_locations": {
+      "type": "array", "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "abstraction", "description", "evidence"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"}, "abstraction": {"$ref": "#/$defs/id"},
+          "description": {"type": "string"}, "evidence": {"$ref": "#/$defs/capability"},
+          "extensions": {"$ref": "#/$defs/extensions"}
+        }
+      }
+    },
+    "nodes": {"type": "array", "items": {"$ref": "#/$defs/node"}},
+    "edges": {"type": "array", "items": {"$ref": "#/$defs/edge"}},
+    "extraction_evidence": {
+      "type": "object", "additionalProperties": false, "required": ["capabilities", "diagnostics", "conformance"],
+      "properties": {
+        "capabilities": {
+          "type": "object", "additionalProperties": {"$ref": "#/$defs/capability"},
+          "required": ["node_extraction", "scalar_reaching_definitions", "branch_merges", "loop_carried_dependencies", "control_dependencies", "execution_dependencies", "returns", "calls", "parameters", "closures", "macros", "memory_aliases", "exceptional_flow", "concurrency", "reference_counting"]
+        },
+        "diagnostics": {"type": "array", "items": {"$ref": "#/$defs/diagnostic"}},
+        "conformance": {
+          "type": "array", "items": {
+            "type": "object", "additionalProperties": false, "required": ["profile", "status", "reasons"],
+            "properties": {
+              "profile": {"$ref": "#/$defs/profile"}, "status": {"enum": ["conformant", "non_conformant", "not_evaluated"]},
+              "reasons": {"type": "array", "items": {"$ref": "#/$defs/id"}}
+            },
+            "allOf": [{"if": {"properties": {"status": {"const": "non_conformant"}}}, "then": {"properties": {"reasons": {"minItems": 1}}}}]
+          }
+        }
+      }
+    },
+    "extensions": {"$ref": "#/$defs/extensions"}
+  },
+  "$defs": {
+    "id": {"type": "string", "minLength": 1},
+    "profile": {
+      "type": "object", "additionalProperties": false, "required": ["id", "version"],
+      "properties": {"id": {"$ref": "#/$defs/id"}, "version": {"$ref": "#/$defs/id"}}
+    },
+    "extensions": {"type": "object", "propertyNames": {"pattern": "^[a-zA-Z][a-zA-Z0-9_.-]*:[a-zA-Z0-9_.-]+$"}},
+    "fact": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["status", "value"], "properties": {"status": {"const": "known"}, "value": {"type": "string"}}},
+        {"type": "object", "additionalProperties": false, "required": ["status", "reason"], "properties": {"status": {"enum": ["unknown", "unsupported", "not_applicable"]}, "reason": {"$ref": "#/$defs/id"}}}
+      ]
+    },
+    "countFact": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["status", "value", "policy"], "properties": {"status": {"const": "known"}, "value": {"type": "integer", "minimum": 0}, "policy": {"$ref": "#/$defs/profile"}}},
+        {"type": "object", "additionalProperties": false, "required": ["status", "reason"], "properties": {"status": {"enum": ["unknown", "unsupported", "not_applicable"]}, "reason": {"$ref": "#/$defs/id"}}}
+      ]
+    },
+    "span": {
+      "description": "Half-open UTF-8 byte offsets into the identified source content.",
+      "type": "object", "additionalProperties": false, "required": ["source_id", "start", "end"],
+      "properties": {"source_id": {"$ref": "#/$defs/id"}, "start": {"type": "integer", "minimum": 0}, "end": {"type": "integer", "minimum": 0}}
+    },
+    "capability": {
+      "type": "object", "additionalProperties": false, "required": ["status", "description"],
+      "properties": {
+        "status": {"enum": ["supported", "approximated", "unsupported", "unknown", "not_applicable"]},
+        "description": {"$ref": "#/$defs/id"}, "policy": {"$ref": "#/$defs/profile"}
+      }
+    },
+    "parameter": {
+      "type": "object", "additionalProperties": false, "required": ["position", "role", "name", "type", "variadic"],
+      "properties": {
+        "position": {"type": "integer", "minimum": 0}, "role": {"enum": ["parameter", "receiver", "capture", "return", "output"]},
+        "symbol_id": {"$ref": "#/$defs/id"}, "name": {"$ref": "#/$defs/fact"}, "type": {"$ref": "#/$defs/fact"},
+        "variadic": {"$ref": "#/$defs/fact"}, "extensions": {"$ref": "#/$defs/extensions"}
+      }
+    },
+    "provenance": {
+      "type": "object", "additionalProperties": false, "required": ["origin", "description"],
+      "properties": {
+        "origin": {"enum": ["source", "desugaring", "macro_expansion", "analysis", "projection"]},
+        "description": {"type": "string"}, "origin_node_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+        "origin_spans": {"type": "array", "items": {"$ref": "#/$defs/span"}}, "policy": {"$ref": "#/$defs/profile"}
+      }
+    },
+    "access": {
+      "type": "object", "additionalProperties": false,
+      "anyOf": [{"required": ["symbol_id"]}, {"required": ["location_id"]}, {"required": ["unresolved_reason"]}],
+      "properties": {
+        "symbol_id": {"$ref": "#/$defs/id"}, "location_id": {"$ref": "#/$defs/id"},
+        "unresolved_reason": {"$ref": "#/$defs/id"}, "operand_position": {"type": "integer", "minimum": 0}
+      }
+    },
+    "node": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "category", "original_kind", "synthetic", "attributes", "provenance", "evidence"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "category": {"enum": ["declaration", "read", "assignment", "computation", "control", "call", "entry", "formal_input", "return", "formal_output", "exit", "merge", "memory_summary", "other"]},
+        "original_kind": {"$ref": "#/$defs/fact"}, "synthetic": {"type": "boolean"}, "source_span": {"$ref": "#/$defs/span"},
+        "provenance": {"$ref": "#/$defs/provenance"}, "evidence": {"$ref": "#/$defs/capability"},
+        "attributes": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "symbol_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+            "defines": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+            "reads": {"type": "array", "items": {"$ref": "#/$defs/access"}},
+            "writes": {"type": "array", "items": {"$ref": "#/$defs/access"}},
+            "operator": {"$ref": "#/$defs/fact"}, "literal": {"$ref": "#/$defs/fact"},
+            "construct": {"$ref": "#/$defs/id"}, "write_form": {"$ref": "#/$defs/id"},
+            "position": {"type": "integer", "minimum": 0}, "exit_kind": {"enum": ["normal", "exceptional", "other"]},
+            "callee": {"$ref": "#/$defs/fact"}, "call_form": {"enum": ["direct", "indirect", "unknown"]},
+            "outcomes": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+            "description": {"$ref": "#/$defs/id"}, "extensions": {"$ref": "#/$defs/extensions"}
+          }
+        },
+        "annotations": {"$ref": "#/$defs/extensions"}
+      },
+      "allOf": [
+        {"if": {"properties": {"synthetic": {"const": false}}}, "then": {"required": ["source_span"]}},
+        {"if": {"properties": {"category": {"const": "other"}}}, "then": {"properties": {"attributes": {"required": ["description"]}}}}
+      ]
+    },
+    "edge": {
+      "description": "Directed multigraph edge. Data: producer to consumer; control: controller to controlled operation; execution: prerequisite to constrained operation under a declared policy.",
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "source", "target", "kind", "subkind", "policy", "evidence", "provenance"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "source": {"$ref": "#/$defs/id"}, "target": {"$ref": "#/$defs/id"},
+        "kind": {"enum": ["data", "control", "execution"]}, "subkind": {"$ref": "#/$defs/id"},
+        "policy": {"$ref": "#/$defs/profile"}, "evidence": {"$ref": "#/$defs/capability"}, "provenance": {"$ref": "#/$defs/provenance"},
+        "operand_position": {"type": "integer", "minimum": 0}, "symbol_id": {"$ref": "#/$defs/id"},
+        "definition_id": {"$ref": "#/$defs/id"}, "location_id": {"$ref": "#/$defs/id"},
+        "outcome": {"$ref": "#/$defs/id"}, "loop_carried": {"type": "boolean"},
+        "annotations": {"$ref": "#/$defs/extensions"}
+      }
+    },
+    "diagnostic": {
+      "type": "object", "additionalProperties": false, "required": ["code", "severity", "message"],
+      "properties": {
+        "code": {"$ref": "#/$defs/id"}, "severity": {"enum": ["info", "warning", "error"]},
+        "message": {"$ref": "#/$defs/id"}, "source_span": {"$ref": "#/$defs/span"},
+        "node_id": {"$ref": "#/$defs/id"}, "capability": {"$ref": "#/$defs/id"}
+      }
+    }
+  }
+}
