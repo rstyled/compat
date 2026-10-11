@@ -5,8 +5,7 @@
 **Status:** normative extraction target, not an implemented producer or a semantic
 support claim. Semantic support remains **unknown until independent fixtures pass**.
 The new-profile capabilities remain unimplemented as recorded in
-[rust-capabilities.md](rust-capabilities.md). Nothing here implements `rstyle`,
-changes the schemas, or asserts legacy conformance.
+[rust-capabilities.md](rust-capabilities.md).
 
 MUST, MUST NOT, SHOULD and MAY are normative. This profile specializes the
 [decision record](ccgraph-decisions.md). Matching is separately specified in
@@ -137,8 +136,13 @@ Each value definition has a fresh graph-local ID independent of its symbol ID.
 
 Use `profile.name = "compat.rust.hir-r0"` in CFG 0.2.0 and
 `profile = {"id":"compat.rust.hir-r0","version":"0.1.0"}` in PDG 0.1.0.
-All R0 node/edge capability policies and provenance policies MUST reference that
-same ID/version; subkind names do not imply differently versioned policies.
+The PDG root `profile` is the sole versioned extraction contract. All count rules,
+capability interpretations, provenance rules and edge semantics derive from that
+ID/version; count facts, capabilities, provenance records and edges MUST NOT carry
+separate `policy` fields. Preserve their evidence statuses, reasons/descriptions
+and provenance/origin details. Subkind names do not identify independently
+versioned policies. The separately versioned matching profile is not the PDG root
+extraction profile.
 CFG profile fields MUST be:
 
 ```json
@@ -430,11 +434,12 @@ paths. Retain all structurally reachable alternatives; do not prune by constants
 
 ## 5. Binding data, control and execution dependence
 
-All dependence edges MUST carry ID, family `kind`, specified `subkind`, R0 policy,
+All dependence edges MUST carry ID, family `kind`, specified `subkind`,
 capability evidence and analysis provenance, with optional annotations only in
-schema extension locations. PDG is a directed **multigraph**: two families on the
-same endpoints remain separate; repeated operands and alternatives preserve their
-edge identities. Directions are producer → consumer, controller → controlled,
+schema extension locations. Their semantics are defined by the root R0 extraction
+profile; no per-edge, capability or provenance `policy` field is emitted. PDG is a
+directed **multigraph**: two families on the same endpoints remain separate;
+repeated operands and alternatives preserve their edge identities. Directions are producer → consumer, controller → controlled,
 and prerequisite → constrained operation, respectively. Operand positions and
 outcomes are evidence, not permission to reverse these directions.
 
@@ -544,8 +549,10 @@ Deferred diagnostics use its `rust.call-summaries`, `rust.abstract-memory`,
 `rust.additional-types` IDs as applicable. Required schema keys and these planning
 IDs are different namespaces of evidence; neither substitutes for the other.
 
-Conformance records use `{profile:{id,version},status,reasons}`; schema statuses
-are `conformant`, `non_conformant`, `not_evaluated`. Initially use `not_evaluated`
+`extraction_evidence.conformance` is one `{status,reasons}` object applying to the
+root extraction `profile`, not an array and not a record with its own `profile`.
+Schema statuses are `conformant`, `non_conformant`, `not_evaluated`. Matching validation remains
+separate from this extraction assessment. Initially use `not_evaluated`
 with a reason identifying unavailable fixture-backed producer evidence. An
 encountered rejection gets `non_conformant` and nonempty reasons. Required positive,
 negative, evaluation-order, scope/span and boundary fixtures must pass before
@@ -575,7 +582,11 @@ A verified reference-count fact counts distinct parameter/local **symbol IDs**
 read by entry-reachable retained read operations, including decomposed compound
 reads; repeated reads count once and shadowed bindings separately. Write-only
 bindings, parameter metadata and implicit borrow syntax add no read occurrence.
-Attach policy evidence identifying this R0 rule. Unknown is not zero.
+This counting rule derives from the root R0 extraction profile; the count fact
+retains its status/value or reason without a separate `policy` field. It satisfies
+the strict matching profile's distinct-retained-read-binding requirement for the
+same reachable slice. A registered extraction profile MUST satisfy that matching
+requirement rather than select a conflicting count meaning. Unknown is not zero.
 
 The separate matching projection MUST preserve meaningful value/operation nodes,
 including formal inputs and required merges, and preserve edge direction, family

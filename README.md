@@ -14,4 +14,8 @@ The initial goal is shared behavior and graph/stage conformance, not a shared ru
 - [Partial inventory checkpoint and resumption guide](inventory/README.md)
 - [Paper contracts and current fidelity gaps](inventory/ccgraph.md)
 
-The audit remains historical documentation-only evidence. The initial matching and Rust extraction profiles are now specified as version `0.1.0`, with hand-authored fixtures and static contract checks; this is not engine conformance or measured clone quality. Implementation follows these contracts. Abstraction mining stays parked until conformance and a bounded labeled quality evaluation pass; broader detectors and rewriting remain separate scopes.
+The audit remains historical documentation-only evidence. The initial matching and Rust extraction profiles are now specified as version `0.1.0`, with hand-authored fixtures and static contract checks; this is not engine conformance or measured clone quality. Implementation follows these contracts.
+
+The shared PDG root `profile: {id, version}` is the sole versioned extraction contract for counts, capability meanings, provenance rules and edge semantics; per-record evidence remains, but separate `policy` fields do not. `extraction_evidence.conformance` is a single `{status, reasons}` assessment of that extraction profile, while matching retains a separate profile. Registered extraction counting rules must satisfy the matching profile's reference-count requirement. This is a contract-only development simplification: neither `gstyle` nor `rstyle` is updated, schema/profile versions are unchanged, and no backward compatibility or legacy representation is provided.
+
+Abstraction mining stays parked until conformance and a bounded labeled quality evaluation pass; broader detectors and rewriting remain separate scopes.

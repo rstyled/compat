@@ -18,16 +18,25 @@ accepted unordered clone pairs and stage evidence. Grouping, alignment, mining,
 retrieval LSH, AST bypass and rewriting are outside this profile.
 
 Validation context contains the paired CFG, exact source bytes/content identities,
-producer/build identity, extraction-policy identity, and category/interface/binding
-facts needed to independently check graph correspondence. It is supplied beside
-PDG documents; do not add fields to closed interchange objects. Validated internal
+producer/build identity, root extraction-profile identity, and category/interface/
+binding facts needed to independently check graph correspondence. It is supplied
+beside PDG documents; do not add fields to closed interchange objects. Validated internal
 views may avoid reparsing JSON but MUST preserve all contract evidence.
 
-An extraction policy must be explicitly registered with its version, normal-flow
-semantics and validation requirements in the run manifest. The first specified
-policy is [compat.rust.hir-r0/0.1.0](rust-extraction-profile.md). A future Go policy
+The PDG root `profile: {id, version}` is its sole versioned extraction contract.
+Count rules, capability interpretations, provenance rules and edge semantics derive
+from it, not per-record `policy` fields. Per-record evidence statuses, reasons and
+provenance/origins remain required. `extraction_evidence.conformance` is one
+`{status, reasons}` object assessing that root extraction profile, not an array of
+profile-qualified records; it does not certify the separate matching profile.
+
+The root extraction profile must be explicitly registered with its version,
+normal-flow semantics, counting rule and validation requirements in the run
+manifest. Its counting rule MUST satisfy this matching profile's reference-count
+requirement (§3). The first specified extraction profile is
+[compat.rust.hir-r0/0.1.0](rust-extraction-profile.md). A future Go extraction profile
 can use the same matcher without pretending to implement Rust extraction. Unknown
-extraction policies are ineligible, not inferred from node shape or language name.
+extraction profiles are ineligible, not inferred from node shape or language name.
 
 Each input requires:
 
@@ -35,11 +44,13 @@ Each input requires:
   validity. Source byte identities and CFG/PDG correspondence must be checked.
 - Verified support for applicable normal-flow node extraction, scalar reaching
   definitions, value joins, control/execution dependence, returns and parameters.
-- Known complete function interface and a verified reference-count policy.
+- Known complete function interface and a verified reference count under the root
+  extraction profile's counting rule.
 - Per-function evidence that unsupported constructs are absent, or a registered
-  policy that explicitly supports them. Empty arrays alone do not establish absence.
-- Known node/edge meanings under that policy. No unresolved memory or call effects
-  may be discarded merely to claim a supported graph.
+  extraction profile that explicitly supports them. Empty arrays alone do not
+  establish absence.
+- Known node/edge meanings under that extraction profile. No unresolved memory or
+  call effects may be discarded merely to claim a supported graph.
 
 Claims of `conformant`/`supported` in producer JSON are inputs to validation, not
 proof. `unknown`, `unsupported`, or `approximated` evidence for a required normal-
@@ -124,8 +135,11 @@ operations, including decomposed compound reads. Repeated reads count once;
 shadowed bindings count separately. Writes, declarations, interface metadata,
 implicit borrow syntax and literals alone do not count. Resolve each read access
 to a known symbol. Recompute this count from retained reads; the producer's known
-reference_count must agree under its recorded policy for the same reachable slice.
-Unknown reference counts or policy mismatch block eligibility, never become zero.
+`reference_count` must agree under the root extraction profile's counting rule for
+the same reachable slice. A registered extraction profile MUST satisfy this count
+meaning; it cannot substitute a per-fact policy or redefine this matching feature.
+Unknown reference counts or a root counting-rule mismatch block eligibility, never
+become zero.
 
 Numerical similarity is cosine of these vectors. A nonempty correctly mapped
 projection has a positive norm. Zero norm is a contract diagnostic, not an empty-
@@ -325,9 +339,9 @@ Detect overflow or use sufficient/exact arithmetic; never wrap/saturate silently
 
 ## 9. Required traces and reproducibility
 
-Record profile/schema/producer/extraction-policy versions, source/graph identities,
-target and build evidence, effective configuration, selected scoring and validation
-results. For each function include projection provenance, category counts, nine
+Record matching-profile/schema/producer/root-extraction-profile versions,
+source/graph identities, target and build evidence, effective configuration,
+selected scoring and validation results. For each function include projection provenance, category counts, nine
 features, exact three strings, reference-count justification and diameter.
 
 For each evaluated pair include ordered keys, size ratio, gate states/reasons,
