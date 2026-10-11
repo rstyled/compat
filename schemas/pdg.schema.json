@@ -169,7 +169,8 @@
           },
           "scope_id": {
             "$ref": "#/$defs/id",
-            "description": "Binding scope identity under the extraction profile; scope identifiers are not necessarily node IDs."
+            "description": "Binding scope identity under the extraction profile; scope identifiers are not necessarily node IDs.",
+            "$comment": "scope:<repo-relative-path>:<kind>:<start-byte>:<end-byte> suggested format"
           },
           "role": {
             "enum": [
