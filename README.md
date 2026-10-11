@@ -6,9 +6,12 @@ Implement a **CCGraph-compatible clone-detection base in both `gstyle` and `rsty
 
 The initial goal is shared behavior and graph/stage conformance, not a shared runtime or repository merge. Paper ambiguities need explicit, versioned decisions; Go/Rust agreement alone is not original-CCGraph reproduction.
 
+- [CCGraph strict matching profile and machine settings](schemas/ccgraph-profile.md)
+- [Rust HIR R0 extraction profile](schemas/rust-extraction-profile.md)
+- [Fixture expectations and contract checks](schemas/README.md)
 - [Implementation plan and milestone gates](ALGORITHM_UNIFICATION.md)
 - [Focused phase-one PDG/CCGraph audit prompt](PHASE_ONE_INVENTORY_PROMPT.md)
 - [Partial inventory checkpoint and resumption guide](inventory/README.md)
 - [Paper contracts and current fidelity gaps](inventory/ccgraph.md)
 
-The audit is documentation-only. Implementation follows contract/fixture work; broader detectors, abstraction mining and rewriting are subsequent scopes with separate acceptance criteria.
+The audit remains historical documentation-only evidence. The initial matching and Rust extraction profiles are now specified as version `0.1.0`, with hand-authored fixtures and static contract checks; this is not engine conformance or measured clone quality. Implementation follows these contracts. Abstraction mining stays parked until conformance and a bounded labeled quality evaluation pass; broader detectors and rewriting remain separate scopes.

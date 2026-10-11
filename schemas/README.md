@@ -1,4 +1,33 @@
-# Graph interchange drafts
+# Graph contracts and CCGraph profiles
+
+## Versioned implementation targets
+
+- [CCGraph strict matching profile](ccgraph-profile.md),
+  `compat.ccgraph.strict/0.1.0`, and [machine settings](ccgraph-profile.json).
+- [Rust HIR R0 extraction profile](rust-extraction-profile.md),
+  `compat.rust.hir-r0/0.1.0`: strict acyclic, scalar-local, normal-flow subset.
+- [Agreed design decisions](ccgraph-decisions.md) and
+  [unimplemented capability/expansion backlog](rust-capabilities.md).
+- [Matching stage expectations](fixtures/ccgraph-matching.json) and
+  [Rust extraction expectations](fixtures/rust-r0-extraction.json). These use
+  explicitly separate fixture formats, not the interchange schemas or analyzer
+  snapshots. Exact results are hand-authored; producer observations remain not run.
+
+The profiles are normative implementation specifications, not existing-engine
+conformance, original-tool reproduction or measured clone quality. They resolve
+paper ambiguities explicitly and preserve source evidence separately from the
+matching view. Schema versions are unchanged; no `rstyle` implementation is replaced.
+
+Run all structural and static contract-consistency tests:
+
+```sh
+uv run --no-project --with jsonschema python -m unittest discover -s schemas -p 'test_*.py'
+```
+
+`test_ccgraph_contract.py` checks settings, hand-worked arithmetic and fixture
+reference/dominance/control/reaching-definition/merge consistency. These checks
+are not a semantic producer validator, compiler run, detector conformance harness
+or quality evaluation. Those are subsequent implementation acceptance gates.
 
 ## CFG schema and example
 
@@ -164,8 +193,8 @@ existing Go/Rust producers conform. No existing graph format is replaced.
   explicit roles; a profile must define their ordering and string serialization.
 - Known facts carry values; unknown/unsupported/not-applicable facts carry reasons.
   A known count of zero differs from missing evidence. `reference_count` requires
-  a versioned counting policy. `variadic` currently uses a string fact; a profile
-  must define its vocabulary (a future revision may introduce typed boolean facts).
+  a versioned counting policy. `variadic` uses a boolean-valued fact; a known false
+  value differs from unavailable evidence. R0 requires known nonvariadic elements.
 - Capability descriptions must explain scope and approximations. Empty arrays do
   not establish absence: consult capability and interface completeness evidence.
   No schema default silently fills in an unknown fact.
@@ -200,10 +229,15 @@ Implement a validator alongside producer integration. It must check:
    `conformant` claim must be checked rather than trusted. JSON Schema alone
    cannot prove completeness or correct reaching-definition analysis.
 
-## Separate CCGraph profile still needed
+## Separate CCGraph matching profile
 
-Do not derive paper labels or features directly from this schema's categories.
-A CCGraph profile must define and version:
+The [strict matching profile](ccgraph-profile.md) and
+[machine settings](ccgraph-profile.json) now specify the initial interpretation.
+The [decision record](ccgraph-decisions.md) preserves the agreed design direction.
+None establishes current producer conformance.
+
+Do not derive paper labels or features implicitly from schema categories: use the
+profile's explicit mapping. The profile defines and versions:
 
 - Projection/simplification rules and removed/collapsed node/edge provenance.
 - Declaration/assignment/control/state/other categories, resolving the state/call
@@ -236,8 +270,10 @@ preserve facts, unknown evidence, parallel edges, and extension data.
 
 ## Next contract milestones
 
-Add category-specific profile constraints, a semantic validator, and positive/
-negative fixtures (unknown evidence, branch merges, loops, calls, parallel edges,
-and invalid references). Resolve paper ambiguities before naming a conformant
-CCGraph profile. A binary transport can be added later without changing these
-semantics if measurements justify it.
+Implement the profiles' category/evidence constraints in a semantic validator and
+materialize the independent expectations as schema-conformant inputs. Extend
+positive/negative coverage (unknown evidence, branches, loops, calls, parallel
+edges and invalid references) under the appropriate supported/deferred profiles.
+Only then certify implementations against the named profile; empirical quality
+requires the separate bounded labeled evaluation. Binary transport may follow
+later if measurements justify it without changing these semantics.
