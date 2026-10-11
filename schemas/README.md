@@ -1,4 +1,136 @@
-# PDG interchange draft
+# Graph interchange drafts
+
+## CFG schema and example
+
+- [`cfg.schema.json`](cfg.schema.json): standalone JSON Schema Draft 2020-12
+  structural contract, version `0.2.0`, with descriptions of fields and semantics.
+- [`cfg.example.json`](cfg.example.json): a self-contained, hand-authored Go
+  fixture with exact source text, a loop, a nested branch, and an early return.
+  It illustrates the schema; it is not an extracted TinyPDG graph or a finalized
+  Go extraction profile.
+
+A CFG describes **possible immediate execution transfers**. Its successor edges
+are not PDG control-dependence, data-dependence, or execution-dependence edges.
+PDG construction additionally needs binding/definition/use facts, memory and
+call assumptions, and a versioned dependence-analysis policy. This draft does
+not supply those facts or select a postdominance algorithm.
+
+### CFG representation
+
+Each document represents one function and declares its construction profile,
+producer, sources, entry, exits, nodes, edges, and extraction evidence. IDs are
+opaque references, not matching labels. Source spans use half-open UTF-8 byte
+offsets, consistent with the PDG draft below.
+
+- `operation` granularity requires exactly one operation per non-boundary node.
+  `basic_block` granularity allows execution-ordered operations with no internal
+  branching; a condition or transfer must terminate its node.
+- Entry and exit nodes are synthetic boundaries with no operations. Exit nodes
+  identify normal, exceptional, or process termination. Multiple returns can
+  share a normal exit; cleanup may introduce intermediate nodes.
+- Nodes retain original operation kinds, source spans, display text, and origin
+  explanations. This initial draft requires source-backed operations; fully
+  synthetic lowered operations need a subsequent profile/schema extension.
+- `true`/`false` and `case`/`default` edges retain branch outcomes. `normal` edges
+  describe fallthrough or unconditional transfers. Abrupt transfers have distinct
+  kinds (`return`, `break`, `continue`, `exception`, `terminate`). Parallel edges
+  are permitted and retain separate IDs.
+- Optional `loop_role` marks back edges and loop exits; it is not a dependency
+  type. A back edge can have `kind: normal` or an appropriate branch outcome.
+- Profiles must document evaluation order, exceptional-flow coverage, exit
+  handling, and unreachable-code retention. Divergence stays cyclic; do not
+  invent executable exit edges merely to make postdominance computation easier.
+  Analysis-only virtual exits belong to a separate analysis policy.
+- `complete` means flow is complete under the declared profile for this function,
+  not that all language constructs are supported. Relevant omissions require
+  `partial` evidence with reasons. Unknown evidence never means no flow.
+- Nodes/edges are unordered collections; operations inside a node are ordered.
+  Sort collections by ID for stable snapshots, not cross-producer equivalence.
+
+### Machine-checkable evaluation-order policy
+
+`profile.evaluation_order` is a closed object with three required fields:
+
+```json
+{
+  "sequencing": "language_defined",
+  "short_circuit": "explicit_branches",
+  "unspecified_order": "reject"
+}
+```
+
+- `sequencing` must be `language_defined`: honor the language's sequencing
+  requirements rather than impose a universal left-to-right rule.
+- `short_circuit` is `explicit_branches` or `reject`. Explicit branches preserve
+  paths that skip conditionally evaluated operands; this includes conditional
+  expressions where applicable. Rejection requires a diagnostic and `partial`
+  or `unknown` extraction evidence when such a construct is encountered.
+- `unspecified_order` is `overapproximate` or `reject`. Overapproximation must
+  preserve every language-permitted relative evaluation order; additional paths
+  are disclosed in limitations. Rejection requires a diagnostic and non-complete
+  evidence when unspecified or indeterminately sequenced evaluations occur.
+  Arbitrarily choosing one order is not supported.
+
+These are policies, not per-function presence flags: the example can declare
+`explicit_branches` even though it contains no short-circuit expression.
+JSON Schema rejects missing fields, unsupported values, extra policy fields,
+and the previous free-text representation. It cannot prove that branches or
+ordering in the graph honor the policy; that requires language-aware semantic
+validation and extraction fixtures. In particular, this schema does not yet
+validate an all-orders graph encoding for unspecified evaluation order.
+
+**Migration:** CFG version `0.2.0` replaces the `0.1.0` free-text
+`evaluation_order` field with this object. Producers must explicitly choose
+policies and update the schema version; do not infer choices from old prose.
+The PDG schema remains at `0.1.0`.
+
+Run the structural policy regression tests with:
+
+```sh
+uv run --no-project --with jsonschema python -m unittest discover -s schemas -p 'test_cfg_schema.py'
+```
+
+### Example topology
+
+The embedded source tests `n > 0`, then `n == 2`. A true nested branch returns
+immediately; otherwise `n--` transfers back to the loop predicate. A false loop
+predicate reaches `return 0`. Both return edges lead to the same normal exit.
+There is deliberately no edge from the early return to the decrement.
+
+```mermaid
+flowchart TD
+    N0["n0: entry"] --> N1{"n1: n > 0"}
+    N1 -->|true| N2{"n2: n == 2"}
+    N1 -->|false| N5["n5: return 0"]
+    N2 -->|true| N3["n3: return n"]
+    N2 -->|false| N4["n4: n--"]
+    N4 -->|back edge| N1
+    N3 --> N7["n7: normal exit"]
+    N5 --> N7
+```
+
+### CFG validation beyond JSON Schema
+
+A semantic validator is still required to check:
+
+1. Unique node, edge, operation, and source IDs in their respective namespaces;
+   all node/source references resolve, including entry and exit IDs.
+2. Exactly one entry node, no incoming entry edges, all exit nodes listed, no
+   outgoing exit edges, and exit IDs referring only to exit nodes.
+3. Span bounds and source content identity; function/operation source mappings
+   must be consistent. Display text need not equal a span's exact source bytes
+   when the profile permits normalized rendering.
+4. Granularity, straight-line block ordering, predicate/transfer placement, and
+   legal successor kinds and branch outcomes under the declared profile.
+5. Reachability, loop annotations, cleanup paths, exceptional-flow coverage,
+   short-circuit splitting, and unsupported-construct evidence through fixtures.
+6. Completeness claims and profile requirements independently of producer claims.
+
+The schema intentionally cannot prove these graph-wide conditions. Positive and
+negative extraction fixtures and a reusable semantic validator remain follow-up
+contract work. This CFG draft does not replace existing producer formats.
+
+## PDG interchange draft
 
 `pdg.schema.json` is a JSON Schema Draft 2020-12 structural contract, version
 `0.1.0`. It is a starting point, not a finalized CCGraph profile or a claim that
