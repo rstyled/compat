@@ -479,6 +479,53 @@
       ],
       "description": "String-valued evidence distinguishing a known value from unknown, unsupported, or not-applicable facts."
     },
+    "factBoolean": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "value"
+          ],
+          "properties": {
+            "status": {
+              "const": "known",
+              "description": "Explicit knowledge, support, or conformance state according to the containing record; must not be inferred from empty collections."
+            },
+            "value": {
+              "type": "boolean",
+              "description": "Known boolean fact value. Both true and false are known values, not substitutes for unknown evidence."
+            }
+          },
+          "description": "Alternative representation of the enclosing fact."
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "reason"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "unknown",
+                "unsupported",
+                "not_applicable"
+              ],
+              "description": "Explicit knowledge, support, or conformance state according to the containing record; must not be inferred from empty collections."
+            },
+            "reason": {
+              "$ref": "#/$defs/id",
+              "description": "Explanation of why a fact is unknown, unsupported, or not applicable."
+            }
+          },
+          "description": "Alternative representation of the enclosing fact."
+        }
+      ],
+      "description": "Boolean-valued evidence distinguishing a known value from unknown, unsupported, or not-applicable facts."
+    },
     "countFact": {
       "oneOf": [
         {
@@ -626,8 +673,8 @@
           "description": "Original type representation or unavailable type evidence; type equivalence is a separate profile decision."
         },
         "variadic": {
-          "$ref": "#/$defs/fact",
-          "description": "String-valued fact describing variadic status under a profile-defined vocabulary; unavailable evidence is explicit."
+          "$ref": "#/$defs/factBoolean",
+          "description": "Boolean-valued fact indicating whether the interface element is variadic; unavailable evidence is explicit."
         },
         "extensions": {
           "$ref": "#/$defs/extensions",
