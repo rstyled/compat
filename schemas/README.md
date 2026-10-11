@@ -16,7 +16,7 @@
 The profiles are normative implementation specifications, not existing-engine
 conformance, original-tool reproduction or measured clone quality. They resolve
 paper ambiguities explicitly and preserve source evidence separately from the
-matching view. Schema versions are unchanged; no `rstyle` implementation is replaced.
+matching view. Schema and profile versions are unchanged.
 
 Run all structural and static contract-consistency tests:
 
@@ -69,7 +69,8 @@ offsets, consistent with the PDG draft below.
 - Profiles must document evaluation order, exceptional-flow coverage, exit
   handling, and unreachable-code retention. Divergence stays cyclic; do not
   invent executable exit edges merely to make postdominance computation easier.
-  Analysis-only virtual exits belong to a separate analysis policy.
+  Analysis-only virtual exits are internal to the dependence analysis defined by
+  the extraction profile, not separately selectable policies or executable CFG edges.
 - `complete` means flow is complete under the declared profile for this function,
   not that all language constructs are supported. Relevant omissions require
   `partial` evidence with reasons. Unknown evidence never means no flow.
@@ -161,9 +162,42 @@ contract work. This CFG draft does not replace existing producer formats.
 
 ## PDG interchange draft
 
-`pdg.schema.json` is a JSON Schema Draft 2020-12 structural contract, version
-`0.1.0`. It is a starting point, not a finalized CCGraph profile or a claim that
-existing Go/Rust producers conform. No existing graph format is replaced.
+- [`pdg.schema.json`](pdg.schema.json): JSON Schema Draft 2020-12 structural
+  contract, version `0.1.0`. It is a starting point, not a finalized CCGraph profile
+  or a claim that existing Go/Rust producers conform. No existing graph format is
+  replaced.
+- [`pdg.example.json`](pdg.example.json): hand-authored Rust example for
+  `fn answer() -> i32 { 1 }`, illustrating the shared PDG contract. It is not
+  compiler extraction or evidence of extraction conformance.
+- [`test_pdg_schema.py`](test_pdg_schema.py): shared schema-only structural tests,
+  not a semantic extraction validator or producer-conformance harness.
+
+Run the PDG schema-only tests with:
+
+```sh
+uv run --no-project --with jsonschema python -m unittest discover -s schemas -p 'test_pdg_schema.py'
+```
+
+### One extraction contract per PDG
+
+The existing root `profile: {id, version}` is the sole versioned extraction
+contract for the document. Counts, capability interpretations, provenance rules
+and data/control/execution edge semantics derive from that extraction profile.
+Count facts (`countFact`), capabilities, provenance records and edges do not carry
+separate `policy` fields. Removing those fields does not remove per-record fact or
+capability statuses, reasons/descriptions, or source/analysis/transformation
+provenance and origin evidence.
+
+`extraction_evidence.conformance` is a single `{status, reasons}` object assessing
+the root extraction profile, not an array of profile-qualified records. Its
+statuses remain `conformant`, `non_conformant` and `not_evaluated`; a claim still requires semantic
+validation. Matching uses a separate, independently versioned profile and run
+validation; it is not another entry in `extraction_evidence.conformance`.
+
+This simplifies the development contract in place: PDG stays at `0.1.0`, other
+schema/profile versions are unchanged, and no old policy fields or conformance
+array are supported through a legacy mode or backward-compatibility adapter.
+Project implementations are not updated by this contract-only change.
 
 ## Representation
 
@@ -184,17 +218,18 @@ existing Go/Rust producers conform. No existing graph format is replaced.
   repeated operands. Edge IDs distinguish occurrences; arrays are not source
   order. Self-edges may be meaningful for loop-carried dependencies.
 - Data edges run producer to consumer. Control edges run controller to controlled
-  operation. Execution edges run prerequisite to constrained operation. Each edge
-  names a versioned semantic policy; execution is not implicitly source order.
+  operation. Execution edges run prerequisite to constrained operation. Their
+  semantics derive from the root extraction profile; execution is not implicitly
+  source order.
   CFG successor relations are not dependency edges and are not in the base edge
   enum. Export a separate CFG if required.
 - `operand_position` is zero-based under the profile's operand ordering. Interface
   positions are zero-based within inputs/outputs. Receivers and captures have
   explicit roles; a profile must define their ordering and string serialization.
 - Known facts carry values; unknown/unsupported/not-applicable facts carry reasons.
-  A known count of zero differs from missing evidence. `reference_count` requires
-  a versioned counting policy. `variadic` uses a boolean-valued fact; a known false
-  value differs from unavailable evidence. R0 requires known nonvariadic elements.
+  A known count of zero differs from missing evidence. `reference_count` follows
+  the root extraction profile's counting rule, not a per-fact policy. `variadic`
+  uses a boolean-valued fact; a known false value differs from unavailable evidence. R0 requires known nonvariadic elements.
 - Capability descriptions must explain scope and approximations. Empty arrays do
   not establish absence: consult capability and interface completeness evidence.
   No schema default silently fills in an unknown fact.
@@ -209,7 +244,7 @@ Implement a validator alongside producer integration. It must check:
 1. Unique IDs in each namespace and valid node/edge/symbol/definition/location/
    source references. Scope IDs must obey the extraction profile's scope model.
    Provenance origin IDs may refer to an external input graph only when a
-   transformation profile defines that reference context.
+   root extraction profile defines that reference context.
 2. Span bounds (`start <= end`, both within identified source bytes), source
    content identity, and source/provenance consistency.
 3. Category-specific attributes: declarations identify bindings; reads identify
@@ -245,14 +280,18 @@ profile's explicit mapping. The profile defines and versions:
 - Nine numerical features: `NumOfCtrlEdges`, `NumOfExcEdges`, `NumOfDataEdges`,
   `NumOfDeclNodes`, `NumOfAssignNodes`, `NumOfCtrlNodes`, `NumOfStateNodes`,
   `NumOfOtherNodes`, `NumOfReference`; counts before/after projection, multiplicity,
-  and the reference-count policy.
+  and the required reference-count meaning.
 - Three string features: `ReturnPara`, `IntroPara`, `Name`; parameter names/types,
   ordering, receivers, captures, separators, and unknown/empty behavior.
 - Initial labels, dependency handling, optional annotations admitted into labels,
   and WL refinement/filtering policies.
 
-Unknown reference counts or incomplete interfaces block a profile requiring
-those features. Omitting execution edges is not paper fidelity.
+A registered extraction profile's counting rule must satisfy the matching
+profile's reference-count requirement for the same projected reachable slice.
+Registration does not let a producer choose a conflicting count meaning; recompute
+and validate the count from binding/read evidence under the root extraction
+profile. Unknown reference counts or incomplete interfaces block a matching
+profile requiring those features. Omitting execution edges is not paper fidelity.
 
 ## Serialization and deterministic comparison
 

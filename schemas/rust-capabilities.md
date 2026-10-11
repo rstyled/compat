@@ -6,6 +6,17 @@ All entries are currently **unimplemented for the new profile**. Legacy `rstyle`
 code may extract related information; this registry makes no claim that it satisfies
 these contracts. Fixture requirements below are designs, not executed tests.
 
+The PDG root `profile: {id, version}` is the sole versioned extraction contract for
+capability meanings, count rules, provenance rules and edge semantics. Capability,
+count, provenance and edge records have no separate `policy` fields; retain their
+per-record evidence statuses, reasons/descriptions and provenance/origins. Stable
+capability IDs are evidence/diagnostic identifiers, not separately versioned
+extraction policies. `extraction_evidence.conformance` is one `{status, reasons}`
+object assessing that root extraction profile; matching has its own separate
+profile and validation.
+The registered extraction profile's counting rule must satisfy the matching
+profile's distinct-retained-read-binding reference-count requirement.
+
 Stable capability IDs should be referenced by future implementation checks and
 structured diagnostics. This document does not implement those checks. Preserve IDs
 when refining scope; new semantics may require profile versions or new IDs.

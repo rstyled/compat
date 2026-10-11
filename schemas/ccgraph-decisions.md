@@ -22,8 +22,15 @@ records remain historical audit evidence.
 - Start with a small, strict supported subset. Missing required evidence makes a
   function ineligible with an actionable diagnostic; never replace it with zero,
   empty strings, or an assumed absence of effects.
-- Keep extraction and matching profiles separately versioned. Retain source
-  evidence and build a traceable, separate CCGraph projection.
+- Keep extraction and matching profiles separately versioned. The PDG root
+  `profile: {id, version}` is the sole versioned extraction contract: counts,
+  capability interpretations, provenance rules and edge semantics derive from it.
+  Count facts, capabilities, provenance records and edges have no separate `policy`
+  fields; retain their evidence statuses, reasons/descriptions and origin evidence.
+  `extraction_evidence.conformance` is one `{status, reasons}` object assessing that
+  root extraction profile, not an array of profile-qualified records or a matching
+  certification.
+  Retain source evidence and build a traceable, separate CCGraph projection.
 - Implement imported-graph matching with independently specified fixtures before
   broad frontend integration. Use exhaustive unordered pairs, no self/reverse
   duplicates, authoritative pair output, and intermediate stage traces.
@@ -191,7 +198,10 @@ Reaching-definition sets do not by themselves require SSA-style merge nodes.
 - Count nodes and edges in the projected CCGraph view; count edge multiplicity.
 - Interpret reference count as distinct local/parameter bindings read in the
   projected function, not read occurrences or reference-typed bindings. Specify
-  how projection retains the necessary binding correspondence.
+  how projection retains the necessary binding correspondence. The registered root
+  extraction profile's counting rule must satisfy this matching reference-count
+  requirement for the same projected reachable slice; no per-count policy may
+  override it.
 - Serialize inputs as ordered normalized type descriptions including receiver
   role; serialize outputs as ordered normalized output-type descriptions.
 - Use the unqualified source function/method name for the name field, not
