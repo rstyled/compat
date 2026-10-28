@@ -1,0 +1,17 @@
+{
+  "description": "Independent source anchors: alias, category, identifier/literal token, 1-based occurrence. Declaration/write anchors name the target; no target read is implied.",
+  "anchors": [
+    ["fa", "formal_input", "a", 1],
+    ["fb", "formal_input", "b", 1],
+    ["ra", "read", "a", 2],
+    ["d0", "declaration", "x", 1],
+    ["rb", "read", "b", 2],
+    ["p", "control", "b", 2],
+    ["one", "computation", "1", 1],
+    ["w1", "assignment", "x", 2],
+    ["two", "computation", "2", 1],
+    ["w2", "assignment", "x", 3],
+    ["rx", "read", "x", 4],
+    ["ret", "return", "return", 1]
+  ]
+}

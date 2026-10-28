@@ -1,0 +1,63 @@
+$ uv run --no-project --with jsonschema python -m unittest discover -s suite -p test_*.py -v
+exit_code=0
+
+test_conflicting_type_binding_guard_and_evidence_rejected (test_adapter.AdapterTests.test_conflicting_type_binding_guard_and_evidence_rejected) ... ok
+test_duplicate_dependencies_remain_distinct (test_adapter.AdapterTests.test_duplicate_dependencies_remain_distinct) ... ok
+test_independent_transport_input (test_adapter.AdapterTests.test_independent_transport_input) ... ok
+test_missing_positions_and_loop_evidence_do_not_match (test_adapter.AdapterTests.test_missing_positions_and_loop_evidence_do_not_match) ... ok
+test_agrees_with_exhaustive_small_graphs (test_suite.ComparatorTests.test_agrees_with_exhaustive_small_graphs) ... ok
+test_arbitrary_ids_and_collection_order (test_suite.ComparatorTests.test_arbitrary_ids_and_collection_order) ... ok
+test_corruptions (test_suite.ComparatorTests.test_corruptions) ... ok
+test_empty_and_self_loop (test_suite.ComparatorTests.test_empty_and_self_loop) ... ok
+test_missing_reference_rejected (test_suite.ComparatorTests.test_missing_reference_rejected) ... ok
+test_parallel_edge_label_multiplicity (test_suite.ComparatorTests.test_parallel_edge_label_multiplicity) ... ok
+test_same_counts_labels_degrees_are_insufficient (test_suite.ComparatorTests.test_same_counts_labels_degrees_are_insufficient) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.093s
+
+OK
+
+$ uv run --no-project --with jsonschema python -m unittest discover -s schemas -p test_*.py -v
+exit_code=0
+
+test_agreed_settings (test_ccgraph_contract.CCGraphContractTests.test_agreed_settings) ... ok
+test_complete_explicit_category_mapping (test_ccgraph_contract.CCGraphContractTests.test_complete_explicit_category_mapping) ... ok
+test_directed_diameter (test_ccgraph_contract.CCGraphContractTests.test_directed_diameter) ... ok
+test_exact_inclusive_boundaries (test_ccgraph_contract.CCGraphContractTests.test_exact_inclusive_boundaries) ... ok
+test_extraction_dominance_and_control_expectations (test_ccgraph_contract.CCGraphContractTests.test_extraction_dominance_and_control_expectations) ... ok
+test_extraction_fixture_references_and_rejections (test_ccgraph_contract.CCGraphContractTests.test_extraction_fixture_references_and_rejections) ... ok
+test_extraction_reaching_definition_expectations (test_ccgraph_contract.CCGraphContractTests.test_extraction_reaching_definition_expectations) ... ok
+test_histogram_scoring_expectations (test_ccgraph_contract.CCGraphContractTests.test_histogram_scoring_expectations) ... ok
+test_interface_serialization (test_ccgraph_contract.CCGraphContractTests.test_interface_serialization) ... ok
+test_jaro_winkler_hand_worked_values_and_symmetry (test_ccgraph_contract.CCGraphContractTests.test_jaro_winkler_hand_worked_values_and_symmetry) ... ok
+test_merge_frontiers_and_guard_availability (test_ccgraph_contract.CCGraphContractTests.test_merge_frontiers_and_guard_availability) ... ok
+test_navigation_and_collection_order_invariance (test_ccgraph_contract.CCGraphContractTests.test_navigation_and_collection_order_invariance) ... ok
+test_normative_document_links (test_ccgraph_contract.CCGraphContractTests.test_normative_document_links) ... ok
+test_pair_depth (test_ccgraph_contract.CCGraphContractTests.test_pair_depth) ... ok
+test_projection_counts_are_hand_consistent (test_ccgraph_contract.CCGraphContractTests.test_projection_counts_are_hand_consistent) ... ok
+test_variadic_schema_is_boolean (test_ccgraph_contract.CCGraphContractTests.test_variadic_schema_is_boolean) ... ok
+test_versions_and_unexecuted_claims (test_ccgraph_contract.CCGraphContractTests.test_versions_and_unexecuted_claims) ... ok
+test_wl_stage_expectations (test_ccgraph_contract.CCGraphContractTests.test_wl_stage_expectations) ... ok
+test_example (test_cfg_schema.CFGSchemaTests.test_example) ... ok
+test_extra_policy_field (test_cfg_schema.CFGSchemaTests.test_extra_policy_field) ... ok
+test_legacy_free_text_and_wrong_object_types (test_cfg_schema.CFGSchemaTests.test_legacy_free_text_and_wrong_object_types) ... ok
+test_old_schema_version (test_cfg_schema.CFGSchemaTests.test_old_schema_version) ... ok
+test_required_fields (test_cfg_schema.CFGSchemaTests.test_required_fields) ... ok
+test_supported_policy_combinations (test_cfg_schema.CFGSchemaTests.test_supported_policy_combinations) ... ok
+test_unsupported_values_and_types (test_cfg_schema.CFGSchemaTests.test_unsupported_values_and_types) ... ok
+test_count_facts_preserve_known_zero_and_unavailable_reasons (test_pdg_schema.PDGSchemaTests.test_count_facts_preserve_known_zero_and_unavailable_reasons) ... ok
+test_edge_families_share_root_profile (test_pdg_schema.PDGSchemaTests.test_edge_families_share_root_profile) ... ok
+test_evidence_statuses_remain_independent (test_pdg_schema.PDGSchemaTests.test_evidence_statuses_remain_independent) ... ok
+test_example_and_unchanged_version (test_pdg_schema.PDGSchemaTests.test_example_and_unchanged_version) ... ok
+test_example_source_identity_and_spans (test_pdg_schema.PDGSchemaTests.test_example_source_identity_and_spans) ... ok
+test_only_root_profile_can_select_extraction_semantics (test_pdg_schema.PDGSchemaTests.test_only_root_profile_can_select_extraction_semantics) ... ok
+test_per_record_policy_fields_are_rejected (test_pdg_schema.PDGSchemaTests.test_per_record_policy_fields_are_rejected) ... ok
+test_provenance_origins_and_details_remain (test_pdg_schema.PDGSchemaTests.test_provenance_origins_and_details_remain) ... ok
+test_root_profile_is_required_and_closed (test_pdg_schema.PDGSchemaTests.test_root_profile_is_required_and_closed) ... ok
+test_single_conformance_assessment (test_pdg_schema.PDGSchemaTests.test_single_conformance_assessment) ... ok
+
+----------------------------------------------------------------------
+Ran 35 tests in 0.094s
+
+OK

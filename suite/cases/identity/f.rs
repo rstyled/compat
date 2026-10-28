@@ -1,0 +1,3 @@
+pub fn f(a: i32) -> i32 {
+    return a;
+}

@@ -1,0 +1,12 @@
+{
+  "gstyle_revision": "15f168134328241a7c5347b5a16a0b740f3a649e",
+  "rstyle_revision": "f7d45862df5ac7278c4684656e56075e9bde118b",
+  "upstream_checked_utc": "2026-10-28",
+  "gstyle_upstream": "https://github.com/rstyled/gstyle",
+  "rstyle_upstream": "https://github.com/rstyled/rstyle",
+  "rust_toolchain": "nightly-2026-09-30",
+  "rustc_commit": "5c543b0b8c73c7b72bc8284ced4fb22ead15734d",
+  "compat_schema_revision": "3e191191a1cf67f9cbcacb270d9ab28d16410284",
+  "gstyle_revision_scope": "unmerged PR #296 branch",
+  "rstyle_revision_scope": "native shared PDG model; no legacy transport support"
+}

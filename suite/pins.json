@@ -1,0 +1,9 @@
+{
+  "gstyle_revision": "e4cdf52713c33ed40cd55c6d351a24dacc3661fb",
+  "rstyle_revision": "419c20a7d2322de9b976c6c2f2f856ad0ce68e98",
+  "upstream_checked_utc": "2026-10-28",
+  "gstyle_upstream": "https://github.com/rstyled/gstyle",
+  "rstyle_upstream": "https://github.com/rstyled/rstyle",
+  "rust_toolchain": "nightly-2026-09-30",
+  "rustc_commit": "5c543b0b8c73c7b72bc8284ced4fb22ead15734d"
+}

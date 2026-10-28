@@ -1,0 +1,156 @@
+name: Go/Rust compatibility
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      gstyle_ref:
+        description: Go branch, tag or commit
+        default: master
+        type: string
+      rstyle_ref:
+        description: Rust branch, tag or commit
+        default: main
+        type: string
+  workflow_call:
+    inputs:
+      compat_ref:
+        description: Exact compat revision containing this workflow and harness
+        required: true
+        type: string
+      gstyle_ref:
+        default: master
+        type: string
+      rstyle_ref:
+        default: main
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compat-${{ github.repository }}-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compatibility:
+    name: Exact PDG compatibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CARGO_TERM_COLOR: never
+      PYTHONDONTWRITEBYTECODE: '1'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout compatibility suite
+        uses: actions/checkout@v6
+        with:
+          repository: rstyled/compat
+          ref: ${{ inputs.compat_ref || github.sha }}
+          path: compat
+          persist-credentials: false
+
+      - name: Checkout gstyle
+        uses: actions/checkout@v6
+        with:
+          repository: rstyled/gstyle
+          ref: ${{ inputs.gstyle_ref || 'master' }}
+          path: producers/gstyle
+          persist-credentials: false
+
+      - name: Checkout rstyle
+        uses: actions/checkout@v6
+        with:
+          repository: rstyled/rstyle
+          ref: ${{ inputs.rstyle_ref || 'main' }}
+          path: producers/rstyle
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: producers/gstyle/go.mod
+          cache-dependency-path: producers/gstyle/go.sum
+
+      - name: Install source-pinned Rust toolchain and components
+        working-directory: producers/rstyle
+        run: rustup show active-toolchain
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: compat-cargo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('producers/rstyle/rust-toolchain.toml', 'producers/rstyle/Cargo.lock') }}
+
+      - name: Install schema validator
+        run: python -m pip install jsonschema==4.26.0
+
+      - name: Test comparator, adapter and reporting
+        id: suite_tests
+        run: |
+          mkdir -p compat/suite/artifacts
+          python -m unittest discover -s compat/suite -v 2>&1 | tee compat/suite/artifacts/unit-tests.log
+
+      - name: Test shared schemas and independent fixtures
+        id: schema_tests
+        run: python -m unittest discover -s compat/schemas -v 2>&1 | tee compat/suite/artifacts/schema-tests.log
+
+      - name: Pin selected producer revisions and compiler
+        run: >-
+          python compat/suite/ci_pins.py
+          --gstyle producers/gstyle --rstyle producers/rstyle
+          --out compat/suite/artifacts/ci-pins.json
+
+      - name: Require exact graphs, schemas, evidence, spans and execution
+        id: extraction
+        run: |
+          python compat/suite/run.py \
+            --pins compat/suite/artifacts/ci-pins.json \
+            --gstyle producers/gstyle --rstyle producers/rstyle \
+            --rust-target compat/suite/.build/rust \
+            --out compat/suite/artifacts/ci \
+            2>&1 | tee compat/suite/artifacts/compat-run.log
+
+      - name: Publish compatibility failure list
+        if: always()
+        env:
+          SUITE_TESTS: ${{ steps.suite_tests.outcome }}
+          SCHEMA_TESTS: ${{ steps.schema_tests.outcome }}
+          EXTRACTION: ${{ steps.extraction.outcome }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          report = Path('compat/suite/artifacts/ci/report.md')
+          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as output:
+              for name in ('SUITE_TESTS', 'SCHEMA_TESTS', 'EXTRACTION'):
+                  output.write(f"- {name}: {os.environ[name]}\n")
+              output.write('\n')
+              output.write(report.read_text() if report.exists() else
+                           'Extraction report unavailable: a preceding setup/test step failed or the run was cancelled. See job logs.\n')
+          PY
+
+      - name: Retain raw outputs, failure list and exact inputs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: compat-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            compat/suite/artifacts/ci/
+            compat/suite/artifacts/ci-pins.json
+            compat/suite/artifacts/*tests.log
+            compat/suite/artifacts/compat-run.log
+            !compat/suite/artifacts/ci/gstyle
+            !compat/suite/artifacts/ci/**/*.bin
+            !compat/suite/artifacts/ci/**/*.rmeta
