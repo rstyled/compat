@@ -18,6 +18,7 @@ original pins and handwritten expectations remain unchanged.
 | Branch source correspondence | Original Go/Rust and renamed Go pass; renamed Rust fails |
 | Harness/comparator tests | 13 pass; includes deliberately corrupted graphs |
 | Existing schema fixture tests | 35 pass |
+| Gstyle export schema test (explicit schema configuration) | Pass |
 | Gstyle repository checks | `make check`, `make cognitive`, `go vet -buildvcs=false ./...`, `make quality-gate` pass |
 
 The source-correspondence failure already occurs in the original retained run.
