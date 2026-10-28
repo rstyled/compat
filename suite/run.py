@@ -161,19 +161,23 @@ class Run:
                 graphs[language] = graph
                 save(directory/(language+'.normalized.json'),graph.document())
                 if name == 'branch':
-                    anchors = json.loads((ROOT/'cases/branch/correspondence.json').read_text())['anchors']
-                    source = (directory/('f.go' if language == 'go' else 'f.rs')).read_text()
-                    source_map = {}
-                    for alias,category,token,occurrence in anchors:
-                        if variant == 'renamed': token = {'a':'input_value','b':'decision','x':'temporary'}.get(token,token)
-                        matches = list(re.finditer(r'\b' + re.escape(token) + r'\b',source))
-                        anchor = matches[occurrence-1]
-                        matches = [n['id'] for n in doc['nodes'] if n['category'] == category
-                                   and n.get('source_span',{}).get('start',-1) <= anchor.start()
-                                   and n.get('source_span',{}).get('end',-1) >= anchor.end()]
-                        if len(matches) != 1: raise Incomplete('Source correspondence ambiguous/missing for ' + alias)
-                        source_map[alias] = matches[0]
-                    save(directory/(language+'.source-correspondence.json'),source_map)
+                    try:
+                        anchors = json.loads((ROOT/'cases/branch/correspondence.json').read_text())['anchors']
+                        source = (directory/('f.go' if language == 'go' else 'f.rs')).read_text()
+                        source_map = {}
+                        for alias,category,token,occurrence in anchors:
+                            if variant == 'renamed': token = {'a':'input_value','b':'decision','x':'temporary'}.get(token,token)
+                            matches = list(re.finditer(r'\b' + re.escape(token) + r'\b',source))
+                            anchor = matches[occurrence-1]
+                            matches = [n['id'] for n in doc['nodes'] if n['category'] == category
+                                       and n.get('source_span',{}).get('start',-1) <= anchor.start()
+                                       and n.get('source_span',{}).get('end',-1) >= anchor.end()]
+                            if len(matches) != 1: raise Incomplete('Source correspondence ambiguous/missing for ' + alias)
+                            source_map[alias] = matches[0]
+                        save(directory/(language+'.source-correspondence.json'),source_map)
+                        results[language]['source_correspondence'] = {'status':'pass'}
+                    except (Incomplete,KeyError,ValueError) as error:
+                        results[language]['source_correspondence'] = {'status':'fail','reason':str(error)}
                 oracle = case(name)
                 mapping = equivalent(oracle,graph)
                 results[language].update(status='pass' if mapping is not None else 'fail',issues=graph.issues)
@@ -246,6 +250,7 @@ class Run:
         passed = all(s[variant][lang].get('status') == 'pass'
                      and s[variant][lang].get('schema') == 'pass'
                      and s[variant][lang].get('evidence_status') == 'pass'
+                     and s[variant][lang].get('source_correspondence',{'status':'pass'})['status'] == 'pass'
                      for s in summary.values() for lang in ('go','rust') for variant in ('original','renamed'))
         passed = passed and all(s['execution']['status'] == 'pass'
                                 and all(v == 'pass' for v in s['invariance'].values())
