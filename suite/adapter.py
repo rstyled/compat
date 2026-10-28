@@ -130,6 +130,7 @@ def normalize(doc, language):
     subkinds = {'scalar-value':'value_operand','reaching-definition':'reaching_definition',
                 'nearest-operation-dominator':'nearest_dominating_operation',
                 'post-dominator-control':'postdominance'}
+    guard_key = 'gstyle.go:guards' if language == 'go' else 'compat.rust.hir-r0:guards'
     seen_edges = set()
     for e in doc['edges']:
         if e['id'] in seen_edges: raise Incomplete('Duplicate edge ID')
@@ -145,7 +146,7 @@ def normalize(doc, language):
         attrs = {}
         for field, ref in [('symbol_id','symbol'),('definition_id','definition')]:
             if field in e: attrs[ref] = ('s:' if ref == 'symbol' else 'd:') + e[field]
-        if 'compat.rust.hir-r0:guards' in e.get('annotations',{}) and subkind != 'value_alternative':
+        if guard_key in e.get('annotations',{}) and subkind != 'value_alternative':
             raise Incomplete('Unexpected guard on nonalternative dependency')
         if 'outcome' in e and not (kind == 'control' or subkind == 'value_alternative'):
             raise Incomplete('Unexpected branch outcome on dependency')
@@ -169,7 +170,7 @@ def normalize(doc, language):
                 if not {'symbol','definition'} <= attrs.keys(): raise Incomplete('Missing reaching-definition identity')
             if subkind == 'value_alternative':
                 attrs['outcome'] = e['outcome']
-                guards = e.get('annotations',{}).get('compat.rust.hir-r0:guards')
+                guards = e.get('annotations',{}).get(guard_key)
                 if not guards or len(guards) != 1 or len(guards[0]) != 1:
                     raise Incomplete('Expected one short-circuit guard atom')
                 atom = guards[0][0]

@@ -37,7 +37,7 @@ class Run:
         self.env['PATH'] = str(Path.home()/'.cargo/bin') + os.pathsep + self.env['PATH']
         self.commands = []
         self.schema = Draft202012Validator(json.loads((ROOT.parent/'schemas/pdg.schema.json').read_text()))
-        self.pins = json.loads((ROOT/'pins.json').read_text())
+        self.pins = json.loads(args.pins.resolve().read_text())
         # Resolve the compiler through rustup for hosts other than this retained run.
         result = self.command('rustc-path', ['rustup','which','--toolchain',self.pins['rust_toolchain'],'rustc'])
         self.rustc = result.stdout.decode().strip()
@@ -98,7 +98,7 @@ class Run:
                                       'cfg':[],'go_module_version':'1.26.0',
                                       'scope':'acyclic primitive scalar normal flow'}
         save(self.out/'manifest.json',manifests)
-        shutil.copy(ROOT/'pins.json', self.out/'pins.json')
+        shutil.copy(self.args.pins.resolve(), self.out/'pins.json')
 
     def extract(self, name, variant):
         directory = self.out/name/variant
@@ -259,6 +259,7 @@ class Run:
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--pins',type=Path,default=ROOT/'pins.json',help='Explicit reviewed producer revisions; default retains the original baseline')
     p.add_argument('--gstyle',type=Path,required=True)
     p.add_argument('--rstyle',type=Path,required=True)
     p.add_argument('--rust-target',type=Path,default=ROOT/'.build/rust')

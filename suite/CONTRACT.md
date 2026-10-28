@@ -89,7 +89,8 @@ that SSA itself is wrong. An adapter must not splice such a merge away.
 
 No graph edges are reconstructed from source, CFG, dominance, or expectations.
 The adapter checks known redundant facts rather than use conflicting values.
-Rust short-circuit guard DNF must be exactly one matching controller/outcome
+Rust `compat.rust.hir-r0:guards` and Go `gstyle.go:guards` short-circuit
+guard DNF must be exactly one matching controller/outcome
 atom for this corpus; general DNF equivalence is outside this contract. Exported merge availability must be unconditional for these expressions; conflicting availability/type facts are rejected. Go's
 unconditional value operands are not reinterpreted as guarded alternatives.
 
