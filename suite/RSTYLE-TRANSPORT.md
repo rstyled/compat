@@ -1,4 +1,7 @@
-# Current Rust transport candidate
+# Historical Rust projection candidate
+
+Superseded by the [native PDG model candidate](RSTYLE-NATIVE-PDG.md), which deletes
+the legacy internal format and projection rather than maintaining two grammars.
 
 On 2026-10-28, upstream rstyle main was verified at
 `419c20a7d2322de9b976c6c2f2f856ad0ce68e98` and compat main at

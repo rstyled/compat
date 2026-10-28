@@ -48,8 +48,9 @@ The official [Go Specification and Rust Reference](references/README.md) resolve
 the relevant language semantics; no guide or existing snapshot is treated as
 producer proof.
 
-The [current transport candidate](RSTYLE-TRANSPORT.md) compares unmerged Go PR
-#296 at `15f1681` with Rust transport fix `fa52e01`. All independent graphs,
-cross-language comparisons, runtime checks and shared schemas pass. The full
-harness still reports the renamed Rust branch span failure and incomplete Go
-evidence. Original failing pins and expectations remain unchanged.
+The [native PDG model candidate](RSTYLE-NATIVE-PDG.md) compares unmerged Go PR
+#296 at `15f1681` with Rust `f7d4586`. The legacy transport machinery and
+its compatibility tests are deleted. All independent graphs, cross-language
+comparisons, runtime checks and shared schemas pass. The full harness still
+reports the renamed Rust branch span failure and incomplete Go evidence.
+Original failing pins and expectations remain unchanged.
