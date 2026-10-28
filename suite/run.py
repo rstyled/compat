@@ -20,6 +20,7 @@ from adapter import normalize, Incomplete
 from expectations import CASES, case
 from graph import equivalent, mismatch
 from source_correspondence import resolve_source, correspondence
+from report import evidence_gaps, write_report
 
 ROOT = Path(__file__).resolve().parent
 
@@ -148,12 +149,7 @@ class Run:
                              for e in self.schema.iter_errors(doc)]
             save(directory/(language+'.schema-errors.json'),schema_errors)
             evidence = doc['extraction_evidence']
-            conformance = evidence['conformance']
-            claims = conformance if isinstance(conformance,list) else [conformance]
-            required_caps = ('node_extraction','parameters','returns','scalar_reaching_definitions',
-                             'control_dependencies','execution_dependencies')
-            supported = all(evidence['capabilities'][c]['status'] == 'supported' for c in required_caps)
-            evidence_status = 'pass' if supported and claims and all(c['status'] == 'conformant' for c in claims) else 'incomplete'
+            evidence_status = 'incomplete' if evidence_gaps(evidence) else 'pass'
             results[language] = {'eligibility': 'published_r0_root' if language == 'rust' else 'selected_' + doc['profile']['id'],
                                  'evidence_status':evidence_status, 'producer_evidence':evidence,'schema':'pass' if not schema_errors else 'fail',
                                  'schema_error_count':len(schema_errors)}
@@ -244,21 +240,10 @@ class Run:
             save(self.out/'summary.json',summary)
             print(name, 'Go:',base['go']['status'],'Rust:',base['rust']['status'],
                   'cross:',base['cross_language'],'execution:',summary[name]['execution']['status'],flush=True)
-        # Full compatibility includes current shared transport schema, separately reported.
-        passed = all(s[variant][lang].get('status') == 'pass'
-                     and s[variant][lang].get('schema') == 'pass'
-                     and s[variant][lang].get('evidence_status') == 'pass'
-                     and s[variant][lang].get('source_content',{}).get('status') == 'pass'
-                     and s[variant][lang].get('source_correspondence',{'status':'pass'})['status'] == 'pass'
-                     for s in summary.values() for lang in ('go','rust') for variant in ('original','renamed'))
-        passed = passed and all(s['execution']['status'] == 'pass'
-                                and all(v == 'pass' for v in s['invariance'].values())
-                                and s['original']['cross_language'] == s['renamed']['cross_language'] == 'pass'
-                                for s in summary.values())
-        save(self.out/'outcome.json',{'status':'pass' if passed else 'fail',
-                                    'note':'Graph, transport, producer evidence and runtime outcomes are separate in summary.json.'})
+        outcome = write_report(self.out, summary)
+        print((self.out/'report.md').read_text(), flush=True)
         print('Artifacts:',self.out)
-        return 0 if passed else 1
+        return 0 if outcome['status'] == 'pass' else 1
 
 
 def main():
@@ -273,7 +258,10 @@ def main():
     run = Run(args)
     try: return run.run()
     except Exception as error:
-        save(run.out/'fatal.json',{'status':'not_run','reason':str(error)})
+        fatal = {'status':'not_run','reason':str(error)}
+        save(run.out/'fatal.json',fatal)
+        summary_path = run.out/'summary.json'
+        write_report(run.out, json.loads(summary_path.read_text()) if summary_path.exists() else {}, fatal)
         print(str(error),file=sys.stderr)
         return 2
 
