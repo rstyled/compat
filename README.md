@@ -19,3 +19,10 @@ The audit remains historical documentation-only evidence. The initial matching a
 The shared PDG root `profile: {id, version}` is the sole versioned extraction contract for counts, capability meanings, provenance rules and edge semantics; per-record evidence remains, but separate `policy` fields do not. `extraction_evidence.conformance` is a single `{status, reasons}` assessment of that extraction profile, while matching retains a separate profile. Registered extraction counting rules must satisfy the matching profile's reference-count requirement. This is a contract-only development simplification: neither `gstyle` nor `rstyle` is updated, schema/profile versions are unchanged, and no backward compatibility or legacy representation is provided.
 
 Abstraction mining stays parked until conformance and a bounded labeled quality evaluation pass; broader detectors and rewriting remain separate scopes.
+
+## Tiny extraction compatibility suite
+
+See [suite/README.md](suite/README.md) for six paired Go/Rust fixtures, an exact
+pre-mining multigraph comparator, independent expectations, and retained runs.
+The initial run exposes compatibility gaps; semantic graph matches, transport
+schema validity, producer evidence, and runtime checks are reported separately.

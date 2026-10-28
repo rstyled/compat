@@ -1,0 +1,22 @@
+{
+  "go-spec.html": {
+    "url": "https://go.dev/ref/spec",
+    "retrieved_date_utc": "2026-10-28",
+    "sha256": "8208c2829be71fc5fce75c87b493156799a9759b999dcfc124470ac89d93e18c"
+  },
+  "rust-operator.html": {
+    "url": "https://doc.rust-lang.org/reference/expressions/operator-expr.html",
+    "retrieved_date_utc": "2026-10-28",
+    "sha256": "88da20a5d8f5e454dcd2a60c02ea9c38bb30b664f43a3c0ac0207b418aca8b8e"
+  },
+  "rust-if.html": {
+    "url": "https://doc.rust-lang.org/reference/expressions/if-expr.html",
+    "retrieved_date_utc": "2026-10-28",
+    "sha256": "57982fc73e21ee6fb8f28bc3fa6c50fb138808b0596d5db130146f043513c593"
+  },
+  "rust-return.html": {
+    "url": "https://doc.rust-lang.org/reference/expressions/return-expr.html",
+    "retrieved_date_utc": "2026-10-28",
+    "sha256": "3d9956deaf42158c868af594d841976740a22aea0fe17ba65872a165b93718d7"
+  }
+}
