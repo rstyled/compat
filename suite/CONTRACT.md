@@ -135,6 +135,6 @@ producer conformance and shared-input execution checks pass. Exit 1 means an
 observed compatibility failure; exit 2 means setup/infrastructure failure.
 Graph checks still run when independent transport validation fails, making
 semantic progress visible without claiming full interoperability.
-Every nonpassing required check is listed in `failures.json`, `report.md` and
-`junit.xml`, with its case, variant, producer, status, reason and detail path.
+Every nonpassing required check is listed in `failures.json` and `report.md`,
+with its case, variant, producer, status, reason and detail path.
 Incomplete evidence remains a failing check in CI and local runs.

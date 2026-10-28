@@ -28,7 +28,7 @@ directory. `--rust-target` optionally reuses a Cargo build directory.
 This suite is expected to exit **1 on the pinned producers**, because it exposes
 real compatibility gaps. Exit 0 is reserved for full conformance; exit 2 reports
 setup/infrastructure failure. It never updates expectations. Every run produces
-`failures.json`, `report.md` and `junit.xml`, listing each nonpassing required
+`failures.json` and `report.md`, listing each nonpassing required
 check, including incomplete evidence. The console prints the failure report.
 See [CI.md](CI.md) for automatic merge/PR checks, manual runs against selected
 producer refs, job summaries and downloadable raw results.

@@ -139,7 +139,7 @@ jobs:
                            'Extraction report unavailable: a preceding setup/test step failed or the run was cancelled. See job logs.\n')
           PY
 
-      - name: Retain raw outputs, failure list, JUnit and exact inputs
+      - name: Retain raw outputs, failure list and exact inputs
         if: always()
         uses: actions/upload-artifact@v4
         with:

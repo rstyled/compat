@@ -45,7 +45,6 @@ Every completed extraction run now produces:
 | --- | --- |
 | `failures.json` | Every nonpassing required check, with case, variant, producer, status, reason and detail path |
 | `report.md` | Readable failure table, totals and exact producer revisions |
-| `junit.xml` | One test per required check; incomplete/unsupported/not-run checks count as failures |
 | `summary.json` | Full per-case results and original producer evidence |
 | `outcome.json` | Strict overall status and counts |
 

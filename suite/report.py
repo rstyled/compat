@@ -1,7 +1,6 @@
 """One strict gate and an explicit list of every nonpassing compatibility check."""
 import json
 from pathlib import Path
-import xml.etree.ElementTree as ET
 
 from expectations import CASES
 
@@ -103,12 +102,4 @@ def write_report(directory, summary, fatal=None):
         lines.append('No failing checks.')
     lines += ['', 'Download the run artifact for exact sources, raw outputs, configuration and mismatch details.', '']
     (directory/'report.md').write_text('\n'.join(lines))
-    suite = ET.Element('testsuite', name='gstyle-rstyle-compat', tests=str(len(records)), failures=str(len(failures)))
-    for record in records:
-        test = ET.SubElement(suite, 'testcase', classname='compat.' + record['producer'],
-                             name='/'.join(record[k] for k in ('case','variant','check')))
-        if record['status'] != 'pass':
-            failure = ET.SubElement(test, 'failure', type=record['status'], message=record['reason'])
-            failure.text = record['artifact']
-    ET.ElementTree(suite).write(directory/'junit.xml', encoding='utf-8', xml_declaration=True)
     return outcome

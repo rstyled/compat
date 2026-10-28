@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-import xml.etree.ElementTree as ET
 
 from expectations import CASES
 from report import REQUIRED_CAPABILITIES, checks, evidence_gaps, write_report
@@ -21,13 +20,12 @@ def passing_summary():
 
 
 class ReportingTests(unittest.TestCase):
-    def test_complete_pass_and_nonpassing_checks_in_json_markdown_and_junit(self):
+    def test_complete_pass_and_nonpassing_checks_in_json_and_markdown(self):
         summary = passing_summary()
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary)
             self.assertEqual(write_report(path,summary)['status'],'pass')
             self.assertEqual(json.loads((path/'failures.json').read_text())['failures'],[])
-            self.assertFalse(ET.parse(path/'junit.xml').findall('.//failure'))
             mutations = [summary['branch']['original']['go'],summary['branch']['renamed']['rust']]
             mutations[0]['status'] = 'fail'
             mutations[1]['source_correspondence'] = {'status':'fail','reason':'shifted | span\nwrong bytes'}
@@ -39,7 +37,6 @@ class ReportingTests(unittest.TestCase):
             failures = json.loads((path/'failures.json').read_text())['failures']
             self.assertEqual({f['check'] for f in failures},
                              {'graph','source_correspondence','cross_language','invariance','execution'})
-            self.assertEqual(len(ET.parse(path/'junit.xml').findall('.//failure')),5)
             self.assertIn('shifted \\| span wrong bytes',(path/'report.md').read_text())
 
     def test_evidence_limits_block_even_when_all_graphs_pass(self):
