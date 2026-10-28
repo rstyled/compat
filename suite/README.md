@@ -6,9 +6,11 @@ worked [branch reassignment](BRANCH.md). [CASES.md](CASES.md) lists every case's
 expected structure and assumptions; [IMPLEMENTATION.md](IMPLEMENTATION.md) records
 the verified producer paths and source evidence.
 
-The pinned **latest upstream default heads checked on 2026-10-28** are Go
-`e4cdf52` and Rust `419c20a`. Build from clean checkouts at the full revisions in
+The original baseline pins capture Go `e4cdf52` and Rust `419c20a` on
+2026-10-28. Build that baseline from clean checkouts at the full revisions in
 [pins.json](pins.json); Rust must use its source-pinned nightly compiler.
+Current CI selects live upstream refs separately; the
+[CI validation results](CI-RESULTS.md) test merged Go `1a47d25` and Rust `5b1b4e0`.
 
 ```sh
 uv run --no-project --with jsonschema python -m unittest discover -s suite -p 'test_*.py'
@@ -52,8 +54,9 @@ The official [Go Specification and Rust Reference](references/README.md) resolve
 the relevant language semantics; no guide or existing snapshot is treated as
 producer proof.
 
-The [native PDG model candidate](RSTYLE-NATIVE-PDG.md) compares unmerged Go PR
-#296 at `15f1681` with Rust `f7d4586`. The legacy transport machinery and
+The retained [native PDG model candidate](RSTYLE-NATIVE-PDG.md) compares Go PR
+#296 at `15f1681` with Rust `f7d4586`; both producer fixes have since merged.
+The legacy transport machinery and
 its compatibility tests are deleted. All independent graphs, cross-language
 comparisons, runtime checks and shared schemas pass. The full harness still
 reports incomplete Go evidence. The previously reported renamed Rust span
