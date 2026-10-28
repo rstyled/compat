@@ -1,5 +1,10 @@
 # Historical Rust projection candidate
 
+**Correction:** the source-span failure recorded below was a harness error.
+Rust's function-relative spans agree with its identified source bytes. See the
+[corrected source checks and rerun](SOURCE-SPANS.md). The historical results and
+archive are retained; their diagnosis is superseded.
+
 Superseded by the [native PDG model candidate](RSTYLE-NATIVE-PDG.md), which deletes
 the legacy internal format and projection rather than maintaining two grammars.
 
@@ -47,9 +52,10 @@ Old exported wire documents require an explicit migration.
 | Comparator/adapter regression tests | 13 pass, including deliberately corrupted graphs |
 | Existing shared schema/static fixture tests | 35 pass |
 
-**Remaining failure:** the renamed Rust branch's `input_value` token begins at
-byte 61, while its exported formal-input span is `[15,26)`, shifted by the
-46-byte leading formatting comment. `branch/renamed/result.json` reports
+**Historical harness failure (diagnosis corrected above):** the renamed Rust
+branch's `input_value` token begins at file byte 61; its exported formal-input
+span `[15,26)` refers to function text beginning at file byte 46.
+`branch/renamed/result.json` reports
 `Source correspondence ambiguous/missing for fa`; compare its `f.rs` and
 `rust.raw.json`. The exact semantic graph still matches its independent oracle.
 No span correction is applied by the comparator or adapter.

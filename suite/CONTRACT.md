@@ -103,6 +103,20 @@ compare clone reference counts, counts used for scoring, or matching labels.
 
 ## Evidence and failure handling
 
+Source spans are half-open **UTF-8 byte** ranges into the exact content identified
+by their source ID and content identity, as required by the shared schema. A
+source path is navigation information; it does not imply whole-file coordinates.
+Go currently identifies the complete fixture file. Rust identifies captured
+function text: the harness verifies the compiler snapshot against the exact
+fixture bytes, slices its recorded function range, and checks the capture digest,
+CFG embedded text/identity and PDG identity against those bytes. It retains the
+identified bytes and checks all published function/node span bounds and source
+references. Branch token anchors are converted from character to byte offsets in
+that content. No exported span or graph is rewritten. Missing/ambiguous branch
+anchors, shifted spans, split UTF-8 code points or inconsistent source evidence
+fail separately from graph equivalence. Full token-to-node correspondence for
+the other five cases is not asserted.
+
 Graph conformance, current-schema validity, producer evidence/conformance,
 compiler/runtime checks, and source metamorphisms are separate results. An exact
 observed graph match cannot upgrade `non_conformant`, approximated or unsupported

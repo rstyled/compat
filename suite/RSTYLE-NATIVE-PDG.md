@@ -1,5 +1,10 @@
 # Native Rust PDG model candidate
 
+**Correction:** the source-span failure recorded below was a harness error,
+not a Rust extractor defect. Rust spans correctly reference the identified
+function fragment. The [corrected source checks and rerun](SOURCE-SPANS.md)
+supersede that diagnosis; the historical archive remains unchanged.
+
 Rust candidate [`f7d4586`](https://github.com/rstyled/rstyle/commit/f7d45862df5ac7278c4684656e56075e9bde118b)
 on `fix/current-pdg-transport` directly models the current shared schema.
 Ordinary serde handles standalone PDGs, pairs, borrowed views, shared unit
@@ -41,11 +46,12 @@ edge helper. A structural check verified that all other JSON values in those
 11 fixtures stayed identical. Source programs, graph nodes/edges and independent
 compat expectations were not regenerated. Both test logs are retained.
 
-**Remaining failure:** renamed Rust branch source correspondence still reports
+**Historical harness failure (diagnosis corrected above):** renamed Rust branch source correspondence reports
 `Source correspondence ambiguous/missing for fa`. The `input_value` token starts
-at byte 61; its exported formal-input span is `[15,26)`, shifted by the 46-byte
-leading comment. See `branch/renamed/f.rs`, `rust.raw.json` and `result.json` in
-the archive. Semantic graph comparisons pass; no adapter corrects this defect.
+at file byte 61; its exported formal-input span is `[15,26)` in the captured
+function beginning at file byte 46. These are consistent coordinates. See
+`branch/renamed/f.rs`, `rust.raw.json` and `result.json` in the archive.
+Semantic graph comparisons pass; the producer needs no offset correction.
 
 **Incomplete evidence:** Go retains approximated node extraction,
 nonconformance and its incomplete-dependencies diagnostic. Observed graph

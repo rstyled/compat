@@ -42,6 +42,15 @@ those anchors against actual spans and retains the resulting producer IDs even
 when the graph fails. The table's observed IDs are from the pinned latest run;
 they are **not** inputs to the oracle or comparator.
 
+Spans use bytes in the content identified by each producer, not necessarily the
+entire file. In the renamed Rust variant the captured function occupies file
+bytes `[46,260)`. Its `input_value` formal has span `[15,26)` in those 214 bytes,
+so its file start is `46 + 15 = 61`, exactly the token's position. The PDG's
+`sha256:15efe238b0ee753301ddcc9def7f2b6fc4e1d8802c72d059324ce4f8621d3328`
+identifies that function fragment. The former whole-file anchor check incorrectly
+reported a producer defect. The harness now verifies the source identity and
+captured bytes before checking anchors; it never adjusts exported offsets.
+
 | Alias | Go source | Rust source | Category | Observed Go / Rust ID |
 |---|---|---|---|---|
 | fa | parameter `a int32` | parameter `a: i32` | formal_input, position 0 | n1 / n0 |

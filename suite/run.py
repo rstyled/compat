@@ -19,6 +19,7 @@ from jsonschema import Draft202012Validator
 from adapter import normalize, Incomplete
 from expectations import CASES, case
 from graph import equivalent, mismatch
+from source_correspondence import resolve_source, correspondence
 
 ROOT = Path(__file__).resolve().parent
 
@@ -160,24 +161,21 @@ class Run:
                 graph = normalize(doc,language)
                 graphs[language] = graph
                 save(directory/(language+'.normalized.json'),graph.document())
-                if name == 'branch':
-                    try:
+                try:
+                    fixture = (directory/('f.go' if language == 'go' else 'f.rs')).read_bytes()
+                    content, identity = resolve_source(doc, fixture, language,
+                                                       bundle if language == 'rust' else None)
+                    (directory/(language+'.identified-source.txt')).write_bytes(content)
+                    save(directory/(language+'.source-content.json'),identity)
+                    results[language]['source_content'] = {'status':'pass'}
+                    if name == 'branch':
                         anchors = json.loads((ROOT/'cases/branch/correspondence.json').read_text())['anchors']
-                        source = (directory/('f.go' if language == 'go' else 'f.rs')).read_text()
-                        source_map = {}
-                        for alias,category,token,occurrence in anchors:
-                            if variant == 'renamed': token = {'a':'input_value','b':'decision','x':'temporary'}.get(token,token)
-                            matches = list(re.finditer(r'\b' + re.escape(token) + r'\b',source))
-                            anchor = matches[occurrence-1]
-                            matches = [n['id'] for n in doc['nodes'] if n['category'] == category
-                                       and n.get('source_span',{}).get('start',-1) <= anchor.start()
-                                       and n.get('source_span',{}).get('end',-1) >= anchor.end()]
-                            if len(matches) != 1: raise Incomplete('Source correspondence ambiguous/missing for ' + alias)
-                            source_map[alias] = matches[0]
+                        source_map = correspondence(doc, content, anchors, variant == 'renamed')
                         save(directory/(language+'.source-correspondence.json'),source_map)
                         results[language]['source_correspondence'] = {'status':'pass'}
-                    except (Incomplete,KeyError,ValueError) as error:
-                        results[language]['source_correspondence'] = {'status':'fail','reason':str(error)}
+                except (Incomplete,KeyError,ValueError,IndexError,TypeError) as error:
+                    field = 'source_correspondence' if results[language].get('source_content',{}).get('status') == 'pass' else 'source_content'
+                    results[language][field] = {'status':'fail','reason':str(error)}
                 oracle = case(name)
                 mapping = equivalent(oracle,graph)
                 results[language].update(status='pass' if mapping is not None else 'fail',issues=graph.issues)
@@ -250,6 +248,7 @@ class Run:
         passed = all(s[variant][lang].get('status') == 'pass'
                      and s[variant][lang].get('schema') == 'pass'
                      and s[variant][lang].get('evidence_status') == 'pass'
+                     and s[variant][lang].get('source_content',{}).get('status') == 'pass'
                      and s[variant][lang].get('source_correspondence',{'status':'pass'})['status'] == 'pass'
                      for s in summary.values() for lang in ('go','rust') for variant in ('original','renamed'))
         passed = passed and all(s['execution']['status'] == 'pass'

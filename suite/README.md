@@ -52,5 +52,8 @@ The [native PDG model candidate](RSTYLE-NATIVE-PDG.md) compares unmerged Go PR
 #296 at `15f1681` with Rust `f7d4586`. The legacy transport machinery and
 its compatibility tests are deleted. All independent graphs, cross-language
 comparisons, runtime checks and shared schemas pass. The full harness still
-reports the renamed Rust branch span failure and incomplete Go evidence.
+reports incomplete Go evidence. The previously reported renamed Rust span
+failure was a harness coordinate error: spans reference identified function
+bytes, not the full file. See the [source-span correction](SOURCE-SPANS.md) for
+the verified correspondence, corruption checks and retained rerun.
 Original failing pins and expectations remain unchanged.
