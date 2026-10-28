@@ -1,5 +1,11 @@
 # Go scalar graph fix candidate
 
+**Source-span correction:** the historical renamed Rust failure below was
+caused by the harness comparing whole-file positions with function-relative
+spans. Rust's identified content and spans agree. See the
+[corrected diagnosis and rerun](SOURCE-SPANS.md); historical raw outputs remain
+unchanged.
+
 Candidate gstyle revision `e8e1baf5cd4b71325ae730bc69a66df02b3e0275`
 ([branch](https://github.com/rstyled/gstyle/tree/fix/scalar-pdg-compatibility))
 was tested against rstyle `419c20a7d2322de9b976c6c2f2f856ad0ce68e98`.
